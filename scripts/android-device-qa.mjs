@@ -6,6 +6,8 @@ const packageName = 'com.unexpectedgame.unxpected';
 const apkPath = path.resolve('Unxpected-release.apk');
 const outDir = path.resolve('qa-artifacts');
 const screenshotPath = path.join(outDir, 'device-latest.png');
+const menuScreenshotPath = path.join(outDir, 'device-menu-latest.png');
+const gameplayScreenshotPath = path.join(outDir, 'device-gameplay-latest.png');
 
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -21,6 +23,14 @@ function adb(args, options = {}) {
   return run('adb', args, options);
 }
 
+function tryAdb(args, options = {}) {
+  const result = spawnSync('adb', args, { encoding: 'utf8', ...options });
+  return {
+    ok: result.status === 0,
+    output: `${result.stdout ?? ''}${result.stderr ?? ''}`
+  };
+}
+
 function parseDevices(output) {
   return output
     .split(/\r?\n/)
@@ -31,7 +41,7 @@ function parseDevices(output) {
 }
 
 function isLockscreenActive(windowDump) {
-  return /mDreamingLockscreen=true|mShowingLockscreen=true|NotificationShade/.test(windowDump);
+  return /mDreamingLockscreen=true|mShowingLockscreen=true|mKeyguardShowing=true/.test(windowDump);
 }
 
 function hasFatalLog(log) {
@@ -41,12 +51,16 @@ function hasFatalLog(log) {
 const report = {
   apk: apkPath,
   screenshot: screenshotPath,
+  menuScreenshot: menuScreenshotPath,
+  gameplayScreenshot: gameplayScreenshotPath,
   device: null,
   installed: false,
   launched: false,
+  gameplayTapped: false,
   visualCapture: 'not-run',
   lockscreenActive: false,
-  fatalLog: false
+  fatalLog: false,
+  warnings: []
 };
 
 try {
@@ -64,7 +78,8 @@ try {
   report.installed = true;
 
   adb(['shell', 'am', 'force-stop', packageName]);
-  adb(['logcat', '-c']);
+  const clearLog = tryAdb(['logcat', '-c']);
+  if (!clearLog.ok) report.warnings.push('Unable to clear logcat before launch; checking recent logs after launch.');
   adb(['shell', 'monkey', '-p', packageName, '-c', 'android.intent.category.LAUNCHER', '1']);
   report.launched = true;
 
@@ -77,10 +92,23 @@ try {
 
   adb(['shell', 'screencap', '-p', '/sdcard/unxpected_latest.png']);
   adb(['pull', '/sdcard/unxpected_latest.png', screenshotPath]);
+  adb(['pull', '/sdcard/unxpected_latest.png', menuScreenshotPath]);
   report.visualCapture = report.lockscreenActive ? 'blocked-by-secure-lockscreen' : 'captured';
 
-  const log = adb(['logcat', '-d', '-t', '700']);
-  report.fatalLog = hasFatalLog(log);
+  if (!report.lockscreenActive) {
+    adb(['shell', 'input', 'tap', '620', '860']);
+    report.gameplayTapped = true;
+    execFileSync('powershell', ['-NoProfile', '-Command', 'Start-Sleep -Seconds 3'], { stdio: 'ignore' });
+    adb(['shell', 'screencap', '-p', '/sdcard/unxpected_gameplay.png']);
+    adb(['pull', '/sdcard/unxpected_gameplay.png', gameplayScreenshotPath]);
+  }
+
+  const log = tryAdb(['logcat', '-d', '-t', '700']);
+  if (log.ok) {
+    report.fatalLog = hasFatalLog(log.output);
+  } else {
+    report.warnings.push('Unable to read logcat after launch.');
+  }
 
   console.log(JSON.stringify(report, null, 2));
   if (report.fatalLog || !report.foregroundActivity) process.exitCode = 1;

@@ -634,13 +634,13 @@ label {
   min-width: 76px;
   min-height: 58px;
   border-color: rgba(216, 255, 232, 0.28);
-  background: rgba(8, 12, 22, 0.34);
+  background: rgba(8, 12, 22, 0.26);
   box-shadow:
     0 0 0 1px rgba(69, 215, 255, 0.12) inset,
     0 10px 26px rgba(0, 0, 0, 0.26);
   backdrop-filter: blur(8px);
   font-weight: 800;
-  opacity: 0.66;
+  opacity: 0.5;
   transition: background 80ms ease, border-color 80ms ease, opacity 80ms ease, transform 80ms ease;
 }
 
@@ -886,6 +886,15 @@ label {
   body.is-playing .rotate-device {
     display: grid;
   }
+
+  body.is-playing .hud {
+    opacity: 0.18;
+  }
+
+  body.is-playing .mobile-controls,
+  body.is-playing .tutorial-card {
+    display: none !important;
+  }
 }
 
 @media (hover: none) and (orientation: landscape) {
@@ -953,9 +962,18 @@ label {
   }
 
   .mobile-controls button {
-    min-width: 66px;
-    min-height: 50px;
-    padding: 0.45rem 0.72rem;
+    min-width: 52px;
+    min-height: 42px;
+    padding: 0.3rem 0.46rem;
+  }
+
+  .mobile-controls__move {
+    gap: 0.3rem;
+  }
+
+  .mobile-controls__move button {
+    min-width: 40px;
+    font-size: 1.18rem;
   }
 }
 

@@ -1,9 +1,10 @@
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs/promises';
+import net from 'node:net';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
 
-const port = Number(process.env.QA_PORT ?? 5187);
+const port = Number(process.env.QA_PORT) || await findFreePort();
 const baseUrl = `http://127.0.0.1:${port}`;
 const outDir = path.resolve('qa-artifacts');
 const ignoredConsole = /GPU stall due to ReadPixels/;
@@ -13,8 +14,8 @@ await fs.mkdir(outDir, { recursive: true });
 
 const serverCommand = process.platform === 'win32' ? 'cmd.exe' : 'npm';
 const serverArgs = process.platform === 'win32'
-  ? ['/d', '/s', '/c', `npm run dev -- --port ${port}`]
-  : ['run', 'dev', '--', '--port', String(port)];
+  ? ['/d', '/s', '/c', `npm run dev -- --port ${port} --strictPort`]
+  : ['run', 'dev', '--', '--port', String(port), '--strictPort'];
 const server = spawn(serverCommand, serverArgs, {
   cwd: process.cwd(),
   env: {
@@ -362,9 +363,11 @@ async function runMobilePortraitQa(browser) {
   const portrait = await page.evaluate(() => ({
     rotateVisible: getComputedStyle(document.querySelector('#rotate-device')).display !== 'none',
     controlsVisible: getComputedStyle(document.querySelector('#mobile-controls')).display !== 'none',
+    tutorialVisible: getComputedStyle(document.querySelector('#tutorial-card')).display !== 'none',
+    hudOpacity: Number(getComputedStyle(document.querySelector('#hud')).opacity),
     overflowX: document.documentElement.scrollWidth > window.innerWidth
   }));
-  assert('mobile portrait play asks for rotation and keeps layout stable', portrait.rotateVisible && portrait.controlsVisible && !portrait.overflowX, portrait);
+  assert('mobile portrait play asks for rotation without showing gameplay controls behind the overlay', portrait.rotateVisible && !portrait.controlsVisible && !portrait.tutorialVisible && portrait.hudOpacity < 0.35 && !portrait.overflowX, portrait);
   await page.screenshot({ path: path.join(outDir, 'mobile-portrait-rotate.png'), fullPage: true });
   await page.close();
   return { menu, portrait };
@@ -470,4 +473,22 @@ function stopServer() {
     return;
   }
   server.kill();
+}
+
+function findFreePort() {
+  return new Promise((resolve, reject) => {
+    const listener = net.createServer();
+    listener.unref();
+    listener.on('error', reject);
+    listener.listen(0, '127.0.0.1', () => {
+      const address = listener.address();
+      listener.close(() => {
+        if (typeof address === 'object' && address?.port) {
+          resolve(address.port);
+          return;
+        }
+        reject(new Error('Unable to allocate a QA server port.'));
+      });
+    });
+  });
 }
