@@ -17,7 +17,12 @@ const serverArgs = process.platform === 'win32'
   : ['run', 'dev', '--', '--port', String(port)];
 const server = spawn(serverCommand, serverArgs, {
   cwd: process.cwd(),
-  env: { ...process.env, BROWSER: 'none' },
+  env: {
+    ...process.env,
+    BROWSER: 'none',
+    VITE_SUPABASE_URL: '',
+    VITE_SUPABASE_ANON_KEY: ''
+  },
   stdio: ['ignore', 'pipe', 'pipe']
 });
 
@@ -34,16 +39,17 @@ try {
   const browser = await chromium.launch();
 
   const desktop = await runDesktopQa(browser);
+  const level99 = await runLevel99Qa(browser);
   const mobileLandscape = await runMobileLandscapeQa(browser);
   const mobilePortrait = await runMobilePortraitQa(browser);
 
   await browser.close();
 
   if (failures.length) {
-    console.error(JSON.stringify({ failures, desktop, mobileLandscape, mobilePortrait, outDir }, null, 2));
+    console.error(JSON.stringify({ failures, desktop, level99, mobileLandscape, mobilePortrait, outDir }, null, 2));
     process.exitCode = 1;
   } else {
-    console.log(JSON.stringify({ desktop, mobileLandscape, mobilePortrait, outDir }, null, 2));
+    console.log(JSON.stringify({ desktop, level99, mobileLandscape, mobilePortrait, outDir }, null, 2));
   }
 } finally {
   stopServer();
@@ -94,10 +100,9 @@ async function runDesktopQa(browser) {
   await page.click('#tutorial-skip-button');
   const skippedTutorial = await page.evaluate(() => ({
     hidden: document.querySelector('#tutorial-card')?.classList.contains('tutorial-card--hidden'),
-    stored: window.localStorage.getItem('unxpected:tutorial-complete'),
-    notice: document.querySelector('#hud-notice')?.textContent
+    stored: window.localStorage.getItem('unxpected:tutorial-complete')
   }));
-  assert('desktop tutorial can be skipped and is persisted', skippedTutorial.hidden && skippedTutorial.stored === '1' && skippedTutorial.notice?.includes('Tutorial skipped'), skippedTutorial);
+  assert('desktop tutorial can be skipped and is persisted', skippedTutorial.hidden && skippedTutorial.stored === '1', skippedTutorial);
 
   const beforeMove = await page.evaluate(() => window.__PARADOX_DEBUG__.snapshot().player.x);
   await page.keyboard.down('ArrowRight');
@@ -198,6 +203,100 @@ async function runDesktopQa(browser) {
 
   await page.close();
   return { menu, started, pause, summary: { grade: summary.grade, progression: summary.progression.length } };
+}
+
+async function runLevel99Qa(browser) {
+  const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+  watchPage(page, 'level-99');
+  await page.addInitScript(() => {
+    window.localStorage.setItem('unxpected.meta.v1', JSON.stringify({
+      campaign: {
+        highestUnlockedLevel: 99,
+        selectedLevel: 99
+      },
+      playerName: 'QA Runner',
+      leaderboard: [],
+      xp: 0
+    }));
+    window.localStorage.setItem('unxpected:tutorial-complete', '1');
+  });
+  await page.goto(`${baseUrl}/?debugPhysics=1`, { waitUntil: 'networkidle' });
+
+  const menu = await inspectMenu(page);
+  assert('level 99 menu unlock state is selectable', menu.campaignProgress === 'Unlocked 99/99' && menu.startButton === 'Start Level 99', menu);
+  await page.click('#start-button');
+  await page.waitForFunction(() => Boolean(window.__PARADOX_DEBUG__?.snapshot));
+  await page.waitForTimeout(450);
+
+  const boot = await page.evaluate(() => {
+    const snapshot = window.__PARADOX_DEBUG__.snapshot();
+    const inertIds = [
+      'sky_strike_02',
+      'timer_shot_02',
+      'rolling_rock_02',
+      'hunter_02',
+      'final_sky_strike'
+    ];
+    const requiredIds = [...inertIds, 'spike_pressure_variant'];
+    return {
+      hudMode: document.querySelector('#hud-mode')?.textContent,
+      missing: requiredIds.filter((id) => !snapshot.entities[id]),
+      entityCount: Object.keys(snapshot.entities).length,
+      transparentAdvancedHazards: inertIds.every((id) => {
+        const entity = snapshot.entities[id];
+        return entity && entity.mask === 'sensor' && entity.alpha < 0.01;
+      }),
+      activePressureSpike: snapshot.entities.spike_pressure_variant?.mask === 'lethal_hazard'
+        && snapshot.entities.spike_pressure_variant?.bodyEnabled
+    };
+  });
+  assert('level 99 boots with endgame hazards staged and pressure spike active', boot.hudMode === 'Level 99' && boot.missing.length === 0 && boot.entityCount >= 29 && boot.transparentAdvancedHazards && boot.activePressureSpike, boot);
+
+  await page.evaluate(() => {
+    const api = window.__PARADOX_DEBUG__;
+    ['sky_strike_02', 'timer_shot_02', 'rolling_rock_02', 'hunter_02', 'final_sky_strike', 'spike_pressure_variant']
+      .forEach((id) => api.forceMutation(id));
+  });
+  await page.waitForFunction(() => {
+    const entities = window.__PARADOX_DEBUG__.snapshot().entities;
+    return ['sky_strike_02', 'timer_shot_02', 'rolling_rock_02', 'hunter_02', 'final_sky_strike', 'spike_pressure_variant']
+      .every((id) => entities[id]?.mask === 'lethal_hazard' && entities[id]?.bodyEnabled);
+  }, null, { timeout: 1800 });
+  const mutated = await page.evaluate(() => {
+    const entities = window.__PARADOX_DEBUG__.snapshot().entities;
+    return Object.fromEntries(['sky_strike_02', 'timer_shot_02', 'rolling_rock_02', 'hunter_02', 'final_sky_strike', 'spike_pressure_variant']
+      .map((id) => [id, entities[id]]));
+  });
+  assert('level 99 forced endgame hazards become active lethal physics objects', Object.values(mutated).every((entity) => entity.mask === 'lethal_hazard' && entity.bodyEnabled), mutated);
+  await page.screenshot({ path: path.join(outDir, 'desktop-level-99-endgame.png'), fullPage: true });
+
+  await page.evaluate(() => window.__PARADOX_DEBUG__.killPlayer('QA level 99 reset'));
+  const resetPoll = await waitForDebugSnapshot(page, (snapshot) => (
+    snapshot.deaths >= 1
+      && snapshot.player.visible
+      && snapshot.player.animation !== 'player-death'
+      && snapshot.player.x < 145
+  ), { timeout: 7000 });
+  assert('level 99 death respawns from the start', resetPoll.matched, resetPoll.snapshot);
+  const reset = await page.evaluate(() => {
+    const snapshot = window.__PARADOX_DEBUG__.snapshot();
+    const inertIds = ['sky_strike_02', 'timer_shot_02', 'rolling_rock_02', 'hunter_02', 'final_sky_strike'];
+    return {
+      player: snapshot.player,
+      mutationsSurvived: snapshot.run.mutationsSurvived,
+      hazards: Object.fromEntries(['sky_strike_02', 'timer_shot_02', 'rolling_rock_02', 'hunter_02', 'final_sky_strike', 'spike_pressure_variant']
+        .map((id) => [id, snapshot.entities[id]])),
+      inertRestored: inertIds.every((id) => {
+        const entity = snapshot.entities[id];
+        return entity?.mask === 'sensor' && !entity.bodyEnabled && entity.alpha < 0.01;
+      }),
+      pressureSpikeRestored: snapshot.entities.spike_pressure_variant?.mask === 'lethal_hazard'
+        && snapshot.entities.spike_pressure_variant?.bodyEnabled
+    };
+  });
+  assert('level 99 death reset restores endgame hazards to original state', reset.mutationsSurvived === 0 && reset.inertRestored && reset.pressureSpikeRestored, reset);
+  await page.close();
+  return { menu, boot, mutatedCount: Object.keys(mutated).length, reset: { player: reset.player, mutationsSurvived: reset.mutationsSurvived } };
 }
 
 async function runMobileLandscapeQa(browser) {

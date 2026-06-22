@@ -464,6 +464,120 @@ function createCampaignVariants(
     }));
   }
 
+  if (campaignLevel >= 33) {
+    variants.push(hazard('sky_strike_02', 1510 + variant * 32, 68, 50, 50, {
+      behavior: 'sky_fall',
+      render_layer: 'transparent',
+      collision_mask: 'sensor',
+      mutation_event: {
+        trigger_condition: 'time_elapsed_ms',
+        condition_value: Math.max(3300, 6200 - campaignLevel * 16 + variant * 160),
+        action: 'sky_strike',
+        hint: 'AI chained a second sky drop',
+        once: true,
+        telegraph_ms: Math.max(360, 650 - tier * 18),
+        active_profiles: ['Balanced', 'Speedrunner', 'Methodical', 'Panicked', 'Safe-Zoner'],
+        mutated_state: {
+          render_layer: 'visual_rock',
+          collision_mask: 'lethal_hazard',
+          alpha: 1,
+          velocity: { x: variant % 2 === 0 ? 36 : -34, y: 410 + tier * 24 + Math.round(trapScale * 110) }
+        }
+      }
+    }));
+  }
+
+  if (campaignLevel >= 49) {
+    variants.push(hazard('timer_shot_02', 1225 + variant * 30, 540 - (variant % 3) * 34, 56, 18, {
+      render_layer: 'transparent',
+      collision_mask: 'sensor',
+      mutation_event: {
+        trigger_condition: 'time_elapsed_ms',
+        condition_value: Math.max(2800, 5400 - campaignLevel * 14 + variant * 130),
+        action: 'weapon_fire',
+        hint: 'AI chained a cross-lane shot',
+        once: true,
+        telegraph_ms: Math.max(330, 560 - tier * 15),
+        active_profiles: ['Balanced', 'Speedrunner', 'Methodical', 'Panicked', 'Safe-Zoner'],
+        mutated_state: {
+          render_layer: 'visual_projectile',
+          collision_mask: 'lethal_hazard',
+          alpha: 1,
+          velocity: { x: -(420 + variant * 30 + tier * 28 + Math.round(trapScale * 95)), y: variant % 2 === 0 ? -18 : 18 }
+        }
+      }
+    }));
+  }
+
+  if (campaignLevel >= 65) {
+    variants.push(hazard('rolling_rock_02', 2630 + variant * 18, 606, 58, 58, {
+      behavior: 'rolling_hazard',
+      render_layer: 'transparent',
+      collision_mask: 'sensor',
+      mutation_event: {
+        trigger_condition: 'player_distance_less_than',
+        condition_value: 460 + tier * 24,
+        action: 'rolling_rock',
+        hint: 'AI released a second rolling rock',
+        once: true,
+        telegraph_ms: Math.max(310, 560 - tier * 17),
+        active_profiles: ['Balanced', 'Speedrunner', 'Methodical', 'Panicked', 'Safe-Zoner'],
+        mutated_state: {
+          render_layer: 'visual_rock',
+          collision_mask: 'lethal_hazard',
+          alpha: 1,
+          velocity: { x: -(230 + variant * 22 + tier * 28), y: 0 }
+        }
+      }
+    }));
+  }
+
+  if (campaignLevel >= 81) {
+    variants.push(hazard('hunter_02', 3000 + variant * 20, 590, 48, 64, {
+      behavior: 'hunter_chase',
+      render_layer: 'transparent',
+      collision_mask: 'sensor',
+      mutation_event: {
+        trigger_condition: 'profile_detected',
+        condition_value: variant % 2 === 0 ? 'Speedrunner' : 'Balanced',
+        action: 'hunter_spawn',
+        hint: 'AI deployed a second hunter unit',
+        once: true,
+        telegraph_ms: Math.max(360, 590 - tier * 18),
+        active_profiles: ['Balanced', 'Speedrunner', 'Methodical', 'Safe-Zoner', 'Panicked'],
+        mutated_state: {
+          render_layer: 'visual_hunter',
+          collision_mask: 'lethal_hazard',
+          alpha: 1,
+          velocity: { x: -130 - tier * 18, y: 0 }
+        }
+      }
+    }));
+  }
+
+  if (campaignLevel >= 97) {
+    variants.push(hazard('final_sky_strike', 2260 + variant * 20, 60, 52, 52, {
+      behavior: 'sky_fall',
+      render_layer: 'transparent',
+      collision_mask: 'sensor',
+      mutation_event: {
+        trigger_condition: 'time_elapsed_ms',
+        condition_value: 3000 + variant * 120,
+        action: 'sky_strike',
+        hint: 'AI final anomaly dropped into the route',
+        once: true,
+        telegraph_ms: 330,
+        active_profiles: ['Balanced', 'Speedrunner', 'Methodical', 'Panicked', 'Safe-Zoner'],
+        mutated_state: {
+          render_layer: 'visual_rock',
+          collision_mask: 'lethal_hazard',
+          alpha: 1,
+          velocity: { x: variant % 2 === 0 ? -48 : 48, y: 520 + Math.round(trapScale * 120) }
+        }
+      }
+    }));
+  }
+
   return variants;
 }
 

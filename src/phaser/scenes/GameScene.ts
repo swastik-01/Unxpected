@@ -230,6 +230,7 @@ export class GameScene extends Phaser.Scene {
   private pausedByUi = false;
   private respawnAt = 0;
   private respawning = false;
+  private routeStartedAt = 0;
   private runComplete = false;
   private runStartedAt = 0;
   private totalCoins = 0;
@@ -245,6 +246,7 @@ export class GameScene extends Phaser.Scene {
   private lastAirVelocityY = 0;
   private lastGroundedAt = 0;
   private playerAnimKey: PlayerAnimKey | '' = '';
+  private profileDecisionReady = false;
   private reducedMotion = false;
   private scanlineLayer: Phaser.GameObjects.TileSprite | null = null;
   private tutorialCompleteHideAt = 0;
@@ -273,6 +275,8 @@ export class GameScene extends Phaser.Scene {
     this.adaptationLog = [];
     this.mutationsSurvived = 0;
     this.runStartedAt = this.time.now;
+    this.routeStartedAt = this.runStartedAt;
+    this.profileDecisionReady = false;
     this.totalCoins = this.level.entities.filter((entity) => entity.base_type === 'collectible').length;
     this.currentDecision = {
       profile: 'Balanced',
@@ -681,7 +685,7 @@ export class GameScene extends Phaser.Scene {
       if (!event || runtime.triggered) continue;
       if (runtime.reactivateAt > time) continue;
       if (event.active_profiles && !event.active_profiles.includes(this.currentDecision.profile)) continue;
-      if (!this.shouldTrigger(event, runtime)) continue;
+      if (!this.shouldTrigger(event, runtime, time)) continue;
 
       if (event.telegraph_ms > 0 && runtime.telegraphStartedAt === null) {
         this.startTelegraph(runtime, event, time);
@@ -694,7 +698,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private shouldTrigger(event: MutationEvent, runtime: RuntimeEntity) {
+  private shouldTrigger(event: MutationEvent, runtime: RuntimeEntity, time: number) {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     switch (event.trigger_condition) {
       case 'player_distance_less_than':
@@ -706,9 +710,11 @@ export class GameScene extends Phaser.Scene {
       case 'player_velocity_greater_than':
         return Math.abs(body.velocity.x) > Number(event.condition_value) && Math.abs(this.player.x - runtime.sprite.x) < 170;
       case 'profile_detected':
-        return this.currentDecision.profile === event.condition_value;
+        return this.profileDecisionReady
+          && this.currentDecision.profile === event.condition_value
+          && Phaser.Math.Distance.Between(this.player.x, this.player.y, runtime.sprite.x, runtime.sprite.y) < 900;
       case 'time_elapsed_ms':
-        return this.time.now > Number(event.condition_value);
+        return time - this.routeStartedAt >= Number(event.condition_value);
       default:
         return false;
     }
@@ -952,12 +958,11 @@ export class GameScene extends Phaser.Scene {
 
     const decision = this.director.ingest(batch, this.level);
     this.currentDecision = decision;
+    this.profileDecisionReady = true;
     this.level.global_environment = decision.environment;
     this.level.input_hijack = decision.inputHijack;
     this.audio.setMusicIntensity(this.getMusicIntensity());
     this.level.tick_sequence += 1;
-
-    this.activateProfileMutations(decision.profile);
 
     if (decision.inputHijack.active && decision.inputHijack.ui_spoofing) {
       window.dispatchEvent(new CustomEvent('paradox:ui-spoof', {
@@ -966,16 +971,6 @@ export class GameScene extends Phaser.Scene {
           durationMs: Math.max(1200, decision.inputHijack.ui_spoofing.delay_ms + 1000)
         }
       }));
-    }
-  }
-
-  private activateProfileMutations(profile: PlayerProfile) {
-    for (const runtime of this.entities.values()) {
-      const event = runtime.schema.mutation_event;
-      if (!event || event.trigger_condition !== 'profile_detected') continue;
-      if (event.condition_value === profile) {
-        this.applyMutation(runtime, event, this.time.now);
-      }
     }
   }
 
@@ -1056,6 +1051,8 @@ export class GameScene extends Phaser.Scene {
     this.coins = 0;
     this.totalCoins = this.level.entities.filter((entity) => entity.base_type === 'collectible').length;
     this.mutationsSurvived = 0;
+    this.routeStartedAt = this.time.now;
+    this.profileDecisionReady = false;
     this.adaptationLog = [];
     this.telemetry.reset(this.time.now);
     this.stationaryMs = 0;
