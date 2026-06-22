@@ -1,6 +1,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 
 const packageName = 'com.unexpectedgame.unxpected';
 const apkPath = path.resolve('Unxpected-release.apk');
@@ -67,6 +68,7 @@ const report = {
   launched: false,
   gameplayTapped: false,
   visualCapture: 'not-run',
+  gameplayVisual: 'not-run',
   lockscreenActive: false,
   fatalLog: false,
   warnings: []
@@ -107,12 +109,13 @@ try {
   if (!report.lockscreenActive) {
     const menuSize = readPngSize(menuScreenshotPath);
     const tapX = menuSize ? Math.round(menuSize.width * 0.603) : 1410;
-    const tapY = menuSize ? Math.round(menuSize.height * 0.194) : 210;
+    const tapY = menuSize ? Math.round(menuSize.height * 0.28) : 302;
     adb(['shell', 'input', 'tap', String(tapX), String(tapY)]);
     report.gameplayTapped = true;
     execFileSync('powershell', ['-NoProfile', '-Command', 'Start-Sleep -Seconds 3'], { stdio: 'ignore' });
     adb(['shell', 'screencap', '-p', '/sdcard/unxpected_gameplay.png']);
     adb(['pull', '/sdcard/unxpected_gameplay.png', gameplayScreenshotPath]);
+    report.gameplayVisual = looksLikeGameplayScreen(gameplayScreenshotPath) ? 'gameplay-detected' : 'menu-or-blank-detected';
   }
 
   const log = tryAdb(['logcat', '-d', '-t', '700']);
@@ -123,8 +126,104 @@ try {
   }
 
   console.log(JSON.stringify(report, null, 2));
-  if (report.fatalLog || !report.foregroundActivity) process.exitCode = 1;
+  if (report.fatalLog || !report.foregroundActivity || report.gameplayVisual === 'menu-or-blank-detected') process.exitCode = 1;
 } catch (error) {
   console.error(JSON.stringify({ ...report, error: error instanceof Error ? error.message : String(error) }, null, 2));
   process.exitCode = 1;
+}
+
+function looksLikeGameplayScreen(filePath) {
+  const png = decodePngRgba(filePath);
+  if (!png) return false;
+
+  let neonGameplayPixels = 0;
+  const startY = Math.floor(png.height * 0.48);
+  for (let y = startY; y < png.height; y += 1) {
+    for (let x = 0; x < png.width; x += 1) {
+      const index = (y * png.width + x) * 4;
+      const red = png.data[index];
+      const green = png.data[index + 1];
+      const blue = png.data[index + 2];
+      const alpha = png.data[index + 3];
+      if (alpha > 180 && green > 125 && green > red * 1.45 && blue > 60 && blue < 230) {
+        neonGameplayPixels += 1;
+      }
+    }
+  }
+  return neonGameplayPixels > png.width * 2;
+}
+
+function decodePngRgba(filePath) {
+  const buffer = fs.readFileSync(filePath);
+  if (buffer.length < 33 || buffer.toString('ascii', 1, 4) !== 'PNG') return null;
+
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let bitDepth = 0;
+  let colorType = 0;
+  const chunks = [];
+
+  while (offset + 12 <= buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString('ascii', offset + 4, offset + 8);
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    if (dataEnd + 4 > buffer.length) return null;
+
+    if (type === 'IHDR') {
+      width = buffer.readUInt32BE(dataStart);
+      height = buffer.readUInt32BE(dataStart + 4);
+      bitDepth = buffer[dataStart + 8];
+      colorType = buffer[dataStart + 9];
+    } else if (type === 'IDAT') {
+      chunks.push(buffer.subarray(dataStart, dataEnd));
+    } else if (type === 'IEND') {
+      break;
+    }
+    offset = dataEnd + 4;
+  }
+
+  if (!width || !height || bitDepth !== 8 || colorType !== 6 || !chunks.length) return null;
+
+  const inflated = zlib.inflateSync(Buffer.concat(chunks));
+  const bytesPerPixel = 4;
+  const stride = width * bytesPerPixel;
+  const output = Buffer.alloc(height * stride);
+  let inputOffset = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    const filter = inflated[inputOffset];
+    inputOffset += 1;
+    const row = inflated.subarray(inputOffset, inputOffset + stride);
+    const previousRow = y > 0 ? output.subarray((y - 1) * stride, y * stride) : null;
+    const outputRow = output.subarray(y * stride, (y + 1) * stride);
+
+    for (let x = 0; x < stride; x += 1) {
+      const left = x >= bytesPerPixel ? outputRow[x - bytesPerPixel] : 0;
+      const up = previousRow ? previousRow[x] : 0;
+      const upLeft = previousRow && x >= bytesPerPixel ? previousRow[x - bytesPerPixel] : 0;
+      let value = row[x];
+
+      if (filter === 1) value = (value + left) & 0xff;
+      else if (filter === 2) value = (value + up) & 0xff;
+      else if (filter === 3) value = (value + Math.floor((left + up) / 2)) & 0xff;
+      else if (filter === 4) value = (value + paeth(left, up, upLeft)) & 0xff;
+      else if (filter !== 0) return null;
+
+      outputRow[x] = value;
+    }
+    inputOffset += stride;
+  }
+
+  return { width, height, data: output };
+}
+
+function paeth(left, up, upLeft) {
+  const estimate = left + up - upLeft;
+  const leftDistance = Math.abs(estimate - left);
+  const upDistance = Math.abs(estimate - up);
+  const upLeftDistance = Math.abs(estimate - upLeft);
+  if (leftDistance <= upDistance && leftDistance <= upLeftDistance) return left;
+  return upDistance <= upLeftDistance ? up : upLeft;
 }

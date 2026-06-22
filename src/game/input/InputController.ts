@@ -26,6 +26,7 @@ const blankActions = (): ActionState => ({
 export class InputController {
   private keyboardState: ActionState = blankActions();
   private touchState: ActionState = blankActions();
+  private touchPointers = new Map<number, keyof ActionState>();
   private lastJump = false;
   private lastDash = false;
 
@@ -70,6 +71,7 @@ export class InputController {
   releaseAll() {
     this.keyboardState = blankActions();
     this.touchState = blankActions();
+    this.touchPointers.clear();
     this.resetEdges();
   }
 
@@ -94,28 +96,54 @@ export class InputController {
   }
 
   private bindTouch() {
+    const syncTouchPointers = () => {
+      this.touchState = blankActions();
+      for (const action of this.touchPointers.values()) {
+        this.touchState[action] = true;
+      }
+    };
+
+    const releasePointer = (event: PointerEvent) => {
+      this.touchPointers.delete(event.pointerId);
+      syncTouchPointers();
+    };
+
+    window.addEventListener('pointerup', releasePointer);
+    window.addEventListener('pointercancel', releasePointer);
+
     this.documentRef.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((button) => {
       const action = button.dataset.action as keyof ActionState | undefined;
       if (!action) return;
 
       const activate = (event: Event) => {
         event.preventDefault();
-        if (event instanceof PointerEvent) button.setPointerCapture?.(event.pointerId);
-        this.touchState[action] = true;
+        if (event instanceof PointerEvent) {
+          try {
+            button.setPointerCapture?.(event.pointerId);
+          } catch {
+            // Synthetic and interrupted WebView pointer events may not be capturable.
+          }
+        }
+        this.touchPointers.set(event instanceof PointerEvent ? event.pointerId : -1, action);
+        syncTouchPointers();
       };
       const release = (event: Event) => {
         event.preventDefault();
         if (event instanceof PointerEvent && button.hasPointerCapture?.(event.pointerId)) {
           button.releasePointerCapture?.(event.pointerId);
         }
-        this.touchState[action] = false;
+        if (event instanceof PointerEvent) {
+          releasePointer(event);
+        } else {
+          this.touchPointers.clear();
+          syncTouchPointers();
+        }
       };
 
       button.addEventListener('pointerdown', activate);
       button.addEventListener('pointerup', release);
       button.addEventListener('pointercancel', release);
-      button.addEventListener('pointerleave', release);
-      button.addEventListener('contextmenu', release);
+      button.addEventListener('contextmenu', (event) => event.preventDefault());
       button.addEventListener('selectstart', (event) => event.preventDefault());
     });
   }

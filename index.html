@@ -94,10 +94,10 @@
             <p class="menu__eyebrow">Adaptive Platformer</p>
             <h1>Unxpected</h1>
             <p>Survive a shifting trap route that studies how you move.</p>
-            <div class="menu__settings">
+            <div class="menu__settings" hidden>
               <label for="aggression">AI aggression</label>
-              <input id="aggression" type="range" min="0" max="100" value="50" />
-              <output id="aggression-output" for="aggression">50%</output>
+              <input id="aggression" type="range" min="0" max="100" value="100" />
+              <output id="aggression-output" for="aggression">100%</output>
             </div>
             <section class="menu__section menu__section--pilot" aria-label="Player profile">
               <div class="menu__section-head">
@@ -200,23 +200,25 @@
                 <h3>Progression</h3>
                 <div id="summary-progression" class="run-summary__progression"></div>
               </div>
-              <div class="run-summary__block">
+              <div class="run-summary__block run-summary__block--secondary" hidden>
                 <h3>Local Missions</h3>
                 <div id="summary-missions" class="run-summary__missions"></div>
               </div>
-              <div class="run-summary__block">
+              <div class="run-summary__block run-summary__block--secondary" hidden>
                 <h3>Observer Recap</h3>
                 <ul id="summary-recap" class="run-summary__recap"></ul>
               </div>
-              <div class="run-summary__block">
+              <div class="run-summary__block run-summary__block--secondary" hidden>
                 <h3>Leaderboard</h3>
                 <span id="summary-global-status" class="run-summary__global-status">Global leaderboard offline</span>
                 <ol id="summary-leaderboard" class="run-summary__leaderboard"></ol>
               </div>
             </section>
-            <button id="resume-button" type="button">Resume</button>
-            <button id="restart-button" type="button">Restart Run</button>
-            <button id="quit-button" type="button">Quit to Menu</button>
+            <div class="pause-menu__actions">
+              <button id="resume-button" type="button">Resume</button>
+              <button id="restart-button" type="button">Restart Run</button>
+              <button id="quit-button" type="button">Quit to Menu</button>
+            </div>
           </div>
         </section>
 

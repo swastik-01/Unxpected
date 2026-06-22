@@ -63,7 +63,7 @@ async function runDesktopQa(browser) {
   await page.goto(`${baseUrl}/?debugPhysics=1`, { waitUntil: 'networkidle' });
 
   const menu = await inspectMenu(page);
-  assert('desktop menu boots as a compact player-facing launch panel', menu.dailyButton === 'Daily Anomaly' && !menu.trainingVisible && menu.aggression === '50%' && menu.campaignProgress === 'Unlocked 1/99' && menu.playerName === 'Runner' && menu.globalStatus && menu.startButton === 'Start Level 1', menu);
+  assert('desktop menu boots as a compact player-facing launch panel', menu.dailyButton === 'Daily Anomaly' && !menu.trainingVisible && !menu.aggressionVisible && menu.aggression === '100%' && menu.campaignProgress === 'Unlocked 1/99' && menu.playerName === 'Runner' && menu.globalStatus && menu.startButton === 'Start Level 1', menu);
   assert('desktop menu has no horizontal overflow or internal scrolling', !menu.overflowX && !menu.panelScrollable, menu);
   assert('desktop menu keeps controls hidden', menu.mobileControlsHidden, menu);
   await page.screenshot({ path: path.join(outDir, 'desktop-menu.png'), fullPage: true });
@@ -175,9 +175,10 @@ async function runDesktopQa(browser) {
   const pause = await page.evaluate(() => ({
     title: document.querySelector('#pause-title')?.textContent,
     summaryHidden: document.querySelector('#run-summary')?.classList.contains('run-summary--hidden'),
-    controlsHidden: document.querySelector('#mobile-controls')?.classList.contains('mobile-controls--hidden')
+    controlsHidden: document.querySelector('#mobile-controls')?.classList.contains('mobile-controls--hidden'),
+    panelWidth: document.querySelector('.pause-menu__panel')?.getBoundingClientRect().width ?? 0
   }));
-  assert('desktop pause is a pause state not a run summary', pause.title === 'Paused' && pause.summaryHidden && pause.controlsHidden, pause);
+  assert('desktop pause is compact and not a run summary', pause.title === 'Paused' && pause.summaryHidden && pause.controlsHidden && pause.panelWidth <= 360, pause);
   await page.click('#resume-button');
   await page.waitForFunction(() => document.querySelector('#pause-menu')?.classList.contains('pause-menu--hidden'));
 
@@ -195,10 +196,11 @@ async function runDesktopQa(browser) {
     title: document.querySelector('#pause-title')?.textContent,
     grade: document.querySelector('#summary-grade')?.textContent,
     progression: [...document.querySelectorAll('#summary-progression span')].map((node) => node.textContent),
-    leaderboard: document.querySelectorAll('#summary-leaderboard li').length,
+    nextButton: document.querySelector('#restart-button')?.textContent,
+    secondaryVisible: [...document.querySelectorAll('.run-summary__block--secondary')].some((node) => getComputedStyle(node).display !== 'none'),
     stored: JSON.parse(window.localStorage.getItem('unxpected.meta.v1'))
   }));
-  assert('desktop completion summary records progression and leaderboard', summary.title === 'Run Complete' && summary.progression.length >= 3 && summary.leaderboard >= 1, summary);
+  assert('desktop completion summary is compact and drives the next level', summary.title === 'Level 1 Clear' && summary.nextButton === 'Next Level 2' && summary.progression.some((line) => line?.includes('Level 2 unlocked')) && !summary.secondaryVisible, summary);
   assert('desktop meta progression persisted', summary.stored.xp > 0 && summary.stored.leaderboard.length >= 1, summary.stored);
   await page.screenshot({ path: path.join(outDir, 'desktop-summary.png'), fullPage: true });
 
@@ -337,6 +339,21 @@ async function runMobileLandscapeQa(browser) {
     }));
     assert('mobile landscape tutorial skip hides onboarding and persists choice', tutorialAfterSkip.hidden && tutorialAfterSkip.stored === '1', tutorialAfterSkip);
   }
+
+  const sustainedRight = await page.evaluate(() => new Promise((resolve) => {
+    const button = document.querySelector('[data-action="right"]');
+    const before = window.__PARADOX_DEBUG__.snapshot().player.x;
+    button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 41, pointerType: 'touch' }));
+    window.setTimeout(() => {
+      button.dispatchEvent(new Event('contextmenu', { bubbles: true, cancelable: true }));
+    }, 280);
+    window.setTimeout(() => {
+      const afterContext = window.__PARADOX_DEBUG__.snapshot().player;
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerId: 41, pointerType: 'touch' }));
+      resolve({ before, afterContext });
+    }, 980);
+  }));
+  assert('mobile landscape sustained right hold survives long-press contextmenu', sustainedRight.afterContext.x > sustainedRight.before + 24 && sustainedRight.afterContext.vx > 150, sustainedRight);
   await page.screenshot({ path: path.join(outDir, 'mobile-landscape-gameplay.png'), fullPage: true });
 
   await page.evaluate(() => window.__PARADOX_DEBUG__.completeRun());
@@ -345,11 +362,13 @@ async function runMobileLandscapeQa(browser) {
     overflowX: document.documentElement.scrollWidth > window.innerWidth,
     controlsVisible: getComputedStyle(document.querySelector('#mobile-controls')).display !== 'none',
     title: document.querySelector('#pause-title')?.textContent,
+    nextButton: document.querySelector('#restart-button')?.textContent,
+    secondaryVisible: [...document.querySelectorAll('.run-summary__block--secondary')].some((node) => getComputedStyle(node).display !== 'none'),
     progression: [...document.querySelectorAll('#summary-progression span')].map((node) => node.textContent),
     stored: JSON.parse(window.localStorage.getItem('unxpected.meta.v1'))
   }));
-  assert('mobile landscape completion hides controls and avoids overflow', summary.title === 'Run Complete' && !summary.controlsVisible && !summary.overflowX, summary);
-  assert('mobile landscape standard clear unlocks exactly the next campaign level', summary.stored.campaign.highestUnlockedLevel === 2 && summary.stored.campaign.selectedLevel === 2 && summary.progression.some((line) => line?.includes('Campaign Level 2 unlocked')), summary);
+  assert('mobile landscape completion shows only the next-level screen and avoids overflow', summary.title === 'Level 1 Clear' && summary.nextButton === 'Next Level 2' && !summary.secondaryVisible && !summary.controlsVisible && !summary.overflowX, summary);
+  assert('mobile landscape standard clear unlocks exactly the next campaign level', summary.stored.campaign.highestUnlockedLevel === 2 && summary.stored.campaign.selectedLevel === 2 && summary.progression.some((line) => line?.includes('Level 2 unlocked')), summary);
   await page.screenshot({ path: path.join(outDir, 'mobile-landscape-summary.png'), fullPage: true });
   await page.close();
   return { menu, gameplay, summary };
@@ -385,6 +404,7 @@ async function inspectMenu(page) {
     panelHeight: panel?.height ?? 0,
     panelScrollable: Boolean(document.querySelector('.menu__panel') && document.querySelector('.menu__panel').scrollHeight > document.querySelector('.menu__panel').clientHeight + 1),
     aggression: document.querySelector('#aggression-output')?.textContent ?? '',
+    aggressionVisible: Boolean(document.querySelector('.menu__settings') && getComputedStyle(document.querySelector('.menu__settings')).display !== 'none'),
     campaignProgress: document.querySelector('#campaign-progress')?.textContent ?? '',
     dailyButton: document.querySelector('#daily-button')?.textContent ?? '',
     dailyTitle: document.querySelector('#daily-title')?.textContent ?? '',

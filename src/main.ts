@@ -119,10 +119,12 @@ let game: Phaser.Game | null = null;
 let activeScene: GameScene | null = null;
 let lastMode: MenuMode = 'standard';
 let lastLevelIndex = 1;
+let nextMode: MenuMode = 'standard';
+let nextLevelIndex = 1;
 let showingRunSummary = false;
 let currentDaily = createDailyAnomaly();
 
-const getAggression = () => Number(aggression.value) / 100;
+const getAggression = () => 1;
 const formatScore = new Intl.NumberFormat('en-US');
 
 document.body.classList.add('is-menu');
@@ -218,8 +220,10 @@ function quitToMenu() {
 
 function resetPauseOverlay() {
   showingRunSummary = false;
+  pauseMenu.classList.remove('pause-menu--summary');
   pauseTitle.textContent = 'Paused';
   resumeButton.hidden = false;
+  restartButton.textContent = 'Restart Run';
   runSummary.classList.add('run-summary--hidden');
   summaryMissions.replaceChildren();
   summaryRecap.replaceChildren();
@@ -269,7 +273,13 @@ function renderTutorial(snapshot: TutorialSnapshot) {
 }
 
 function renderRunSummary(summary: RunSummary, progression?: ProgressionResult) {
-  pauseTitle.textContent = 'Run Complete';
+  const nextLevel = progression && summary.mode === 'standard'
+    ? Math.min(maxCampaignLevel, Math.max(summary.levelIndex, Math.min(progression.campaignHighestUnlocked, summary.levelIndex + 1)))
+    : summary.levelIndex;
+  nextMode = summary.mode === 'daily' ? 'daily' : 'standard';
+  nextLevelIndex = nextMode === 'standard' ? nextLevel : 1;
+
+  pauseTitle.textContent = summary.mode === 'daily' ? 'Daily Complete' : `Level ${summary.levelIndex} Clear`;
   summaryGrade.textContent = summary.grade;
   summaryScore.textContent = formatScore.format(summary.score);
   summaryBest.textContent = `Best ${formatScore.format(summary.bestScore)}`;
@@ -308,21 +318,18 @@ function renderRunSummary(summary: RunSummary, progression?: ProgressionResult) 
   );
 
   if (progression) {
-    const unlockedLabels = progression.unlocked.map((unlock) => unlock.label);
     const lines = [
-      `+${formatScore.format(progression.xpEarned)} XP earned, ${formatScore.format(progression.totalXp)} XP total.`,
       summary.mode === 'standard'
-        ? progression.campaignUnlockedLevel
-          ? `Campaign Level ${progression.campaignUnlockedLevel} unlocked.`
-          : `Campaign highest unlocked: Level ${progression.campaignHighestUnlocked}.`
+        ? nextLevel > summary.levelIndex
+          ? `Level ${nextLevel} unlocked.`
+          : `Replay Level ${summary.levelIndex} for a cleaner rank.`
         : null,
-      progression.leaderboardRank ? `Leaderboard entry #${progression.leaderboardRank}.` : 'Score missed the local top 10.',
       summary.mode === 'daily'
         ? progression.dailyCompleted
           ? `Daily anomaly cleared. Streak ${progression.dailyStreak}.`
           : `Daily anomaly already cleared today. Streak ${progression.dailyStreak}.`
         : null,
-      unlockedLabels.length ? `Unlocked: ${unlockedLabels.join(', ')}.` : 'No new unlocks this run.'
+      `+${formatScore.format(progression.xpEarned)} XP`
     ].filter(Boolean) as string[];
 
     summaryProgression.replaceChildren(...lines.map((line) => {
@@ -333,6 +340,12 @@ function renderRunSummary(summary: RunSummary, progression?: ProgressionResult) 
 
     summaryLeaderboard.replaceChildren(...progression.leaderboard.slice(0, 5).map(renderLeaderboardEntry));
   }
+
+  restartButton.textContent = nextMode === 'daily'
+    ? 'Retry Daily'
+    : nextLevelIndex > summary.levelIndex
+      ? `Next Level ${nextLevelIndex}`
+      : `Replay Level ${summary.levelIndex}`;
 }
 
 function renderMenuProgression() {
@@ -457,7 +470,7 @@ startButton.addEventListener('click', () => startGame('standard'));
 dailyButton.addEventListener('click', () => startGame('daily'));
 pauseButton.addEventListener('click', pauseGame);
 resumeButton.addEventListener('click', resumeGame);
-restartButton.addEventListener('click', () => startGame(lastMode, lastLevelIndex));
+restartButton.addEventListener('click', () => startGame(showingRunSummary ? nextMode : lastMode, showingRunSummary ? nextLevelIndex : lastLevelIndex));
 quitButton.addEventListener('click', quitToMenu);
 tutorialSkipButton.addEventListener('click', () => {
   window.dispatchEvent(new CustomEvent('paradox:tutorial-skip'));
@@ -506,6 +519,7 @@ window.addEventListener('paradox:run-complete', (event) => {
   }
   resumeButton.hidden = true;
   runSummary.classList.remove('run-summary--hidden');
+  pauseMenu.classList.add('pause-menu--summary');
   mobileControls.classList.add('mobile-controls--hidden');
   tutorial.classList.add('tutorial-card--hidden');
   pauseMenu.classList.remove('pause-menu--hidden');
