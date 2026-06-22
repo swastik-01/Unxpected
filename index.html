@@ -76,7 +76,7 @@
           </div>
         </section>
 
-        <section id="tutorial-card" class="tutorial-card tutorial-card--hidden" aria-label="Training objective" aria-live="polite">
+        <section id="tutorial-card" class="tutorial-card tutorial-card--hidden" aria-label="Tutorial objective" aria-live="polite">
           <div class="tutorial-card__panel">
             <div class="tutorial-card__meta">
               <span id="tutorial-step">Step 1/6</span>
@@ -93,14 +93,11 @@
           <div class="menu__panel">
             <p class="menu__eyebrow">Adaptive Platformer</p>
             <h1>Unxpected</h1>
-            <p>
-              A schema-driven trap runner where the level studies your habits and mutates
-              while you play.
-            </p>
+            <p>Survive a shifting trap route that studies how you move.</p>
             <div class="menu__settings">
               <label for="aggression">AI aggression</label>
-              <input id="aggression" type="range" min="0" max="100" value="62" />
-              <output id="aggression-output" for="aggression">62%</output>
+              <input id="aggression" type="range" min="0" max="100" value="50" />
+              <output id="aggression-output" for="aggression">50%</output>
             </div>
             <section class="menu__section menu__section--pilot" aria-label="Player profile">
               <div class="menu__section-head">
@@ -111,7 +108,6 @@
             </section>
             <div class="menu__actions">
               <button id="start-button" type="button">Start Run</button>
-              <button id="training-button" type="button">Training Mode</button>
               <button id="daily-button" type="button">Daily Anomaly</button>
             </div>
             <section class="menu__section" aria-label="Campaign levels">
@@ -126,14 +122,14 @@
               </div>
               <p id="campaign-copy">Clear Level 1 to unlock Level 2.</p>
             </section>
-            <section class="menu__section" aria-label="Daily anomaly">
+            <section class="menu__section menu__advanced" aria-label="Daily anomaly" hidden>
               <div class="menu__section-head">
                 <strong id="daily-title">Daily Anomaly</strong>
                 <span id="daily-streak">Streak 0</span>
               </div>
               <p id="daily-copy">A new seeded mutation route appears every day.</p>
             </section>
-            <section class="menu__section" aria-label="Progression">
+            <section class="menu__section menu__advanced" aria-label="Progression" hidden>
               <div class="menu__section-head">
                 <strong>Progression</strong>
                 <span id="progression-xp">XP 0</span>
@@ -147,31 +143,31 @@
             </section>
             <section class="menu__section" aria-label="Accessibility settings">
               <div class="menu__section-head">
-                <strong>Settings</strong>
+                <strong>Sound</strong>
                 <span id="settings-status">Standard UI</span>
               </div>
-              <div class="settings-grid">
-                <label><input id="audio-toggle" type="checkbox" checked /> Audio</label>
-                <label><input id="motion-toggle" type="checkbox" /> Reduced motion</label>
-                <label><input id="color-safe-toggle" type="checkbox" /> Color-safe warnings</label>
-                <label>UI Scale<select id="ui-scale-select"><option value="compact">Compact</option><option value="standard">Standard</option><option value="large">Large</option></select></label>
+              <div class="settings-grid settings-grid--compact">
+                <label><input id="audio-toggle" type="checkbox" checked /> Audio on</label>
+                <label hidden><input id="motion-toggle" type="checkbox" /> Reduced motion</label>
+                <label hidden><input id="color-safe-toggle" type="checkbox" /> Color-safe warnings</label>
+                <label hidden>UI Scale<select id="ui-scale-select"><option value="compact">Compact</option><option value="standard">Standard</option><option value="large">Large</option></select></label>
               </div>
             </section>
-            <section class="menu__section" aria-label="Local leaderboard">
+            <section class="menu__section menu__advanced" aria-label="Local leaderboard" hidden>
               <div class="menu__section-head">
                 <strong>Local Leaderboard</strong>
                 <span id="leaderboard-status">Top runs</span>
               </div>
               <ol id="local-leaderboard" class="local-leaderboard"></ol>
             </section>
-            <section class="menu__section" aria-label="Global leaderboard">
+            <section class="menu__section menu__advanced" aria-label="Global leaderboard" hidden>
               <div class="menu__section-head">
                 <strong>Global Leaderboard</strong>
                 <span id="global-leaderboard-status">Offline</span>
               </div>
               <ol id="global-leaderboard" class="local-leaderboard"></ol>
             </section>
-            <p class="menu__meta">
+            <p class="menu__meta" hidden>
               Keyboard: arrows or A/D to move, Space/W to jump, Shift/K to dash, Esc to pause. Mobile: use the on-screen arrows, Jump, and Dash.
             </p>
           </div>

@@ -19,6 +19,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -65,6 +69,11 @@ button {
   cursor: pointer;
   min-height: 44px;
   padding: 0.68rem 1rem;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
 }
 
 button:focus-visible,
@@ -170,6 +179,16 @@ label {
   display: grid;
   gap: 0.25rem;
   min-width: 5.25rem;
+}
+
+.dash-meter--charging .dash-meter__track {
+  border-color: rgba(255, 209, 102, 0.44);
+}
+
+.dash-meter--ready .dash-meter__track {
+  box-shadow:
+    0 0 0 1px rgba(88, 240, 167, 0.18) inset,
+    0 0 18px rgba(88, 240, 167, 0.16);
 }
 
 .dash-meter__track {
@@ -293,7 +312,7 @@ label {
 
 .menu__panel {
   max-height: min(94vh, 52rem);
-  overflow: auto;
+  overflow: hidden;
 }
 
 .pause-menu__panel {
@@ -328,6 +347,10 @@ label {
   line-height: 1.55;
 }
 
+.menu__panel > p:not(.menu__eyebrow):not(.menu__meta) {
+  margin: 0.75rem 0 0;
+}
+
 .menu__settings {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -348,7 +371,7 @@ label {
 }
 
 .menu__actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 #start-button {
@@ -450,6 +473,10 @@ label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.settings-grid--compact {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .settings-grid input {
@@ -623,6 +650,10 @@ label {
   justify-content: space-between;
   pointer-events: none;
   padding: 0.9rem;
+  touch-action: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
 }
 
 .mobile-controls--hidden {
@@ -642,6 +673,7 @@ label {
   font-weight: 800;
   opacity: 0.5;
   transition: background 80ms ease, border-color 80ms ease, opacity 80ms ease, transform 80ms ease;
+  touch-action: none;
 }
 
 .mobile-controls button:hover,
@@ -650,6 +682,13 @@ label {
   background: rgba(69, 215, 255, 0.26);
   opacity: 0.94;
   transform: translateY(1px);
+}
+
+.mobile-controls button[data-action="dash"].mobile-controls__action--ready {
+  border-color: rgba(88, 240, 167, 0.62);
+  box-shadow:
+    0 0 0 1px rgba(88, 240, 167, 0.18) inset,
+    0 0 22px rgba(88, 240, 167, 0.18);
 }
 
 .mobile-controls__move button {
@@ -980,29 +1019,68 @@ label {
 @media (max-height: 520px) and (orientation: landscape) {
   .menu,
   .pause-menu {
-    padding: 0.55rem;
+    padding: 0.42rem;
     place-items: center;
   }
 
   .menu__panel,
   .pause-menu__panel {
-    max-height: calc(100vh - 1.1rem);
-    padding: 0.85rem;
+    max-height: calc(100vh - 0.84rem);
+    padding: 0.58rem;
+  }
+
+  .menu__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    align-items: start;
+    column-gap: 0.7rem;
+    row-gap: 0.42rem;
+    width: min(50rem, calc(100vw - 0.84rem));
   }
 
   .menu h1 {
-    font-size: clamp(1.85rem, 7vh, 2.7rem);
+    font-size: clamp(1.75rem, 6.4vh, 2.35rem);
   }
 
   .menu p,
   .menu__meta,
   .menu__section p {
-    font-size: 0.78rem;
-    line-height: 1.35;
+    font-size: 0.74rem;
+    line-height: 1.25;
+  }
+
+  .menu__eyebrow {
+    margin-bottom: 0.28rem;
+    font-size: 0.62rem;
+  }
+
+  .menu__panel > p:not(.menu__eyebrow):not(.menu__meta) {
+    display: none;
+  }
+
+  .menu__eyebrow,
+  .menu h1,
+  .menu__settings {
+    grid-column: 1;
   }
 
   .menu__settings {
-    margin: 0.7rem 0;
+    gap: 0.35rem;
+    margin: 0;
+  }
+
+  .menu__actions {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .menu__section--pilot {
+    grid-column: 1;
+  }
+
+  .menu__section[aria-label="Campaign levels"],
+  .menu__section[aria-label="Accessibility settings"] {
+    grid-column: 2;
   }
 
   .menu__actions,
@@ -1012,13 +1090,28 @@ label {
   }
 
   .menu__section {
-    gap: 0.45rem;
-    padding-top: 0.58rem;
+    border-top: 0;
+    gap: 0.34rem;
+    padding-top: 0;
+  }
+
+  #campaign-copy {
+    display: none;
   }
 
   button {
-    min-height: 40px;
-    padding: 0.48rem 0.7rem;
+    min-height: 34px;
+    padding: 0.36rem 0.58rem;
+  }
+
+  input[type="text"],
+  select {
+    min-height: 2.08rem;
+    padding: 0.34rem 0.5rem;
+  }
+
+  .level-picker {
+    grid-template-columns: 2.3rem minmax(0, 1fr) 2.3rem;
   }
 }
 

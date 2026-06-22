@@ -45,7 +45,6 @@ const menuPanel = requiredElement<HTMLElement>('.menu__panel');
 const hud = requiredElement<HTMLElement>('#hud');
 const pauseMenu = requiredElement<HTMLElement>('#pause-menu');
 const startButton = requiredElement<HTMLButtonElement>('#start-button');
-const trainingButton = requiredElement<HTMLButtonElement>('#training-button');
 const dailyButton = requiredElement<HTMLButtonElement>('#daily-button');
 const pauseButton = requiredElement<HTMLButtonElement>('#pause-button');
 const pauseTitle = requiredElement<HTMLElement>('#pause-title');
@@ -61,10 +60,12 @@ const trust = requiredElement<HTMLElement>('#hud-trust');
 const hudTime = requiredElement<HTMLElement>('#hud-time');
 const hudCoins = requiredElement<HTMLElement>('#hud-coins');
 const hudScore = requiredElement<HTMLElement>('#hud-score');
+const dashMeter = requiredElement<HTMLElement>('.dash-meter');
 const dashMeterFill = requiredElement<HTMLElement>('#dash-meter-fill');
 const notice = requiredElement<HTMLElement>('#hud-notice');
 const feed = requiredElement<HTMLElement>('#mutation-feed');
 const mobileControls = requiredElement<HTMLElement>('#mobile-controls');
+const dashButton = requiredElement<HTMLButtonElement>('[data-action="dash"]');
 const tutorial = requiredElement<HTMLElement>('#tutorial-card');
 const tutorialStep = requiredElement<HTMLElement>('#tutorial-step');
 const tutorialProgress = requiredElement<HTMLElement>('#tutorial-progress');
@@ -137,7 +138,7 @@ function createGameConfig(mode: MenuMode, levelOverride?: number): Phaser.Types.
     cosmetics: meta.loadout,
     dailyAnomaly: mode === 'daily' ? currentDaily : undefined,
     input,
-    aggression: mode === 'training' ? Math.min(getAggression(), 0.24) : mode === 'daily' ? Math.max(getAggression(), 0.72) : getAggression(),
+    aggression: mode === 'daily' ? Math.max(getAggression(), 0.72) : getAggression(),
     levelIndex,
     mode
   };
@@ -184,7 +185,9 @@ function startGame(mode: MenuMode, levelOverride?: number) {
 }
 
 function pauseGame() {
+  if (!activeScene || showingRunSummary) return;
   resetPauseOverlay();
+  input.releaseAll();
   activeScene?.setPaused(true);
   mobileControls.classList.add('mobile-controls--hidden');
   tutorial.classList.add('tutorial-card--hidden');
@@ -237,7 +240,13 @@ function renderHud(snapshot: HudSnapshot) {
   hudTime.textContent = snapshot.durationText;
   hudCoins.textContent = `${snapshot.coins}/${snapshot.totalCoins}`;
   hudScore.textContent = formatScore.format(snapshot.score);
-  dashMeterFill.style.transform = `scaleX(${Math.max(0, Math.min(1, snapshot.dashReadyPercent))})`;
+  const dashReadyPercent = Math.max(0, Math.min(1, snapshot.dashReadyPercent));
+  const dashReady = dashReadyPercent >= 0.995;
+  dashMeterFill.style.transform = `scaleX(${dashReadyPercent})`;
+  dashMeter.classList.toggle('dash-meter--ready', dashReady);
+  dashMeter.classList.toggle('dash-meter--charging', !dashReady);
+  dashButton.classList.toggle('mobile-controls__action--ready', dashReady);
+  dashButton.setAttribute('aria-label', dashReady ? 'Dash ready' : 'Dash recharging');
   notice.textContent = snapshot.notice;
   feed.replaceChildren();
   feed.classList.add('mutation-feed--hidden');
@@ -338,7 +347,7 @@ function renderMenuProgression() {
   progressionXp.textContent = `XP ${formatScore.format(meta.xp)}`;
   playerName.value = meta.playerName;
   playerStatus.textContent = meta.playerName === 'Runner' ? 'Set name' : meta.playerName;
-  settingsStatus.textContent = `${meta.accessibility.uiScale[0].toUpperCase()}${meta.accessibility.uiScale.slice(1)} UI`;
+  settingsStatus.textContent = meta.accessibility.audioEnabled ? 'Sound on' : 'Muted';
   leaderboardStatus.textContent = meta.leaderboard.length ? `${meta.leaderboard.length} saved` : 'No runs yet';
 
   populateCosmeticSelect(skinSelect, cosmeticCatalog.skins, meta.unlocked.skins, meta.loadout.skin);
@@ -407,7 +416,7 @@ function populateCosmeticSelect<TId extends string>(
 
 function renderLeaderboardEntry(entry: LeaderboardEntry) {
   const item = document.createElement('li');
-  const mode = entry.mode === 'daily' ? 'Daily' : entry.mode === 'training' ? 'Training' : `Level ${entry.levelIndex}`;
+  const mode = entry.mode === 'daily' ? 'Daily' : `Level ${entry.levelIndex}`;
   item.textContent = `${entry.playerName} - ${mode} ${formatScore.format(entry.score)} ${entry.grade} - ${entry.durationText}, ${entry.deaths} deaths`;
   return item;
 }
@@ -445,7 +454,6 @@ playerName.addEventListener('blur', () => {
 });
 
 startButton.addEventListener('click', () => startGame('standard'));
-trainingButton.addEventListener('click', () => startGame('training'));
 dailyButton.addEventListener('click', () => startGame('daily'));
 pauseButton.addEventListener('click', pauseGame);
 resumeButton.addEventListener('click', resumeGame);
@@ -517,6 +525,18 @@ document.addEventListener('visibilitychange', () => {
     pauseGame();
   }
 });
+
+window.addEventListener('blur', () => {
+  if (activeScene) pauseGame();
+});
+
+window.addEventListener('pagehide', () => {
+  if (activeScene) pauseGame();
+});
+
+mobileControls.addEventListener('contextmenu', (event) => event.preventDefault());
+mobileControls.addEventListener('selectstart', (event) => event.preventDefault());
+mobileControls.addEventListener('copy', (event) => event.preventDefault());
 
 window.addEventListener('keydown', (event) => {
   if (event.code === 'Escape' && activeScene) {

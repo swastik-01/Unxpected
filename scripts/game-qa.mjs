@@ -63,12 +63,12 @@ async function runDesktopQa(browser) {
   await page.goto(`${baseUrl}/?debugPhysics=1`, { waitUntil: 'networkidle' });
 
   const menu = await inspectMenu(page);
-  assert('desktop menu boots with daily entry, pilot name, global-ready status, and locked campaign state', menu.dailyButton === 'Daily Anomaly' && menu.dailyTitle.includes(':') && menu.campaignProgress === 'Unlocked 1/99' && menu.playerName === 'Runner' && menu.globalStatus && menu.startButton === 'Start Level 1', menu);
-  assert('desktop menu has no horizontal overflow', !menu.overflowX, menu);
+  assert('desktop menu boots as a compact player-facing launch panel', menu.dailyButton === 'Daily Anomaly' && !menu.trainingVisible && menu.aggression === '50%' && menu.campaignProgress === 'Unlocked 1/99' && menu.playerName === 'Runner' && menu.globalStatus && menu.startButton === 'Start Level 1', menu);
+  assert('desktop menu has no horizontal overflow or internal scrolling', !menu.overflowX && !menu.panelScrollable, menu);
   assert('desktop menu keeps controls hidden', menu.mobileControlsHidden, menu);
   await page.screenshot({ path: path.join(outDir, 'desktop-menu.png'), fullPage: true });
 
-  await page.click('#training-button');
+  await page.click('#start-button');
   await page.waitForFunction(() => Boolean(window.__PARADOX_DEBUG__?.snapshot));
   await page.waitForFunction(() => window.__PARADOX_DEBUG__?.snapshot().player.onGround, null, { timeout: 5000 });
   const idle = await page.evaluate(() => window.__PARADOX_DEBUG__.snapshot().player);
@@ -94,7 +94,7 @@ async function runDesktopQa(browser) {
     tutorialSkipVisible: !document.querySelector('#tutorial-skip-button')?.hasAttribute('hidden'),
     canvas: document.querySelector('canvas')?.getBoundingClientRect().toJSON()
   }));
-  assert('desktop live HUD is lean and exposes only player-facing run info', started.mode === 'Training' && started.ai && started.time && started.coins === '0/5' && Number(started.score?.replaceAll(',', '')) > 0 && started.mutationFeedHidden, started);
+  assert('desktop live HUD is lean and exposes only player-facing run info', started.mode === 'Level 1' && started.ai && started.time && started.coins === '0/5' && Number(started.score?.replaceAll(',', '')) > 0 && started.mutationFeedHidden, started);
   assert('desktop canvas is full gameplay size', started.canvas.width > 1000 && started.canvas.height > 560, started.canvas);
   assert('desktop tutorial starts with a visible skip control', started.tutorialSkipVisible, started);
 
@@ -305,7 +305,7 @@ async function runMobileLandscapeQa(browser) {
   watchPage(page, 'mobile-landscape');
   await page.goto(`${baseUrl}/?debugPhysics=1`, { waitUntil: 'networkidle' });
   const menu = await inspectMenu(page);
-  assert('mobile landscape menu fits width and shows campaign selector', !menu.overflowX && menu.panelWidth <= 844 && menu.campaignProgress === 'Unlocked 1/99', menu);
+  assert('mobile landscape menu fits without horizontal overflow or internal scrolling', !menu.overflowX && !menu.panelScrollable && menu.panelWidth <= 844 && menu.panelHeight <= 390 && menu.campaignProgress === 'Unlocked 1/99' && !menu.trainingVisible, menu);
 
   await page.click('#start-button');
   await page.waitForFunction(() => Boolean(window.__PARADOX_DEBUG__?.snapshot));
@@ -316,6 +316,9 @@ async function runMobileLandscapeQa(browser) {
     rotateVisible: getComputedStyle(document.querySelector('#rotate-device')).display !== 'none',
     moveButtonCodes: [...document.querySelectorAll('.mobile-controls__move button')].map((node) => node.textContent.trim().codePointAt(0)),
     controlOpacity: Number(getComputedStyle(document.querySelector('.mobile-controls__move button')).opacity),
+    rightUserSelect: getComputedStyle(document.querySelector('[data-action="right"]')).userSelect,
+    rightTouchAction: getComputedStyle(document.querySelector('[data-action="right"]')).touchAction,
+    rightContextMenuPrevented: !document.querySelector('[data-action="right"]').dispatchEvent(new Event('contextmenu', { bubbles: true, cancelable: true })),
     tutorialVisible: getComputedStyle(document.querySelector('#tutorial-card')).display !== 'none',
     tutorialSkipVisible: getComputedStyle(document.querySelector('#tutorial-skip-button')).display !== 'none' && !document.querySelector('#tutorial-skip-button')?.hasAttribute('hidden'),
     hudRunWidth: document.querySelector('.hud__cluster--run')?.getBoundingClientRect().width ?? 0,
@@ -323,6 +326,7 @@ async function runMobileLandscapeQa(browser) {
   }));
   assert('mobile landscape gameplay shows controls without rotate blocker', gameplay.controlsVisible && !gameplay.rotateVisible, gameplay);
   assert('mobile landscape movement uses arrow buttons, not keyboard-letter prompts', gameplay.moveButtonCodes.join(',') === '8592,8594', gameplay);
+  assert('mobile landscape touch buttons suppress long-press selection and context menus', gameplay.rightUserSelect === 'none' && gameplay.rightTouchAction === 'none' && gameplay.rightContextMenuPrevented, gameplay);
   assert('mobile landscape touch controls are translucent and first-run tutorial is skippable', gameplay.controlOpacity < 0.9 && (!gameplay.tutorialVisible || gameplay.tutorialSkipVisible), gameplay);
   assert('mobile landscape HUD fits and exposes score', !gameplay.overflowX && gameplay.hudRunWidth > 0 && Number(gameplay.hudScore?.replaceAll(',', '')) > 0, gameplay);
   if (gameplay.tutorialVisible) {
@@ -356,7 +360,7 @@ async function runMobilePortraitQa(browser) {
   watchPage(page, 'mobile-portrait');
   await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
   const menu = await inspectMenu(page);
-  assert('mobile portrait menu keeps controls hidden', menu.mobileControlsHidden && !menu.overflowX, menu);
+  assert('mobile portrait menu keeps controls hidden and avoids internal scrolling', menu.mobileControlsHidden && !menu.overflowX && !menu.panelScrollable, menu);
 
   await page.click('#start-button');
   await page.waitForTimeout(650);
@@ -379,12 +383,15 @@ async function inspectMenu(page) {
     return {
       panelWidth: panel?.width ?? 0,
     panelHeight: panel?.height ?? 0,
+    panelScrollable: Boolean(document.querySelector('.menu__panel') && document.querySelector('.menu__panel').scrollHeight > document.querySelector('.menu__panel').clientHeight + 1),
+    aggression: document.querySelector('#aggression-output')?.textContent ?? '',
     campaignProgress: document.querySelector('#campaign-progress')?.textContent ?? '',
     dailyButton: document.querySelector('#daily-button')?.textContent ?? '',
     dailyTitle: document.querySelector('#daily-title')?.textContent ?? '',
     globalStatus: document.querySelector('#global-leaderboard-status')?.textContent ?? '',
     playerName: document.querySelector('#player-name')?.value ?? '',
     startButton: document.querySelector('#start-button')?.textContent ?? '',
+    trainingVisible: Boolean(document.querySelector('#training-button') && getComputedStyle(document.querySelector('#training-button')).display !== 'none'),
     mobileControlsHidden: getComputedStyle(document.querySelector('#mobile-controls')).display === 'none',
     overflowX: document.documentElement.scrollWidth > window.innerWidth
   };

@@ -100,10 +100,14 @@ export class InputController {
 
       const activate = (event: Event) => {
         event.preventDefault();
+        if (event instanceof PointerEvent) button.setPointerCapture?.(event.pointerId);
         this.touchState[action] = true;
       };
       const release = (event: Event) => {
         event.preventDefault();
+        if (event instanceof PointerEvent && button.hasPointerCapture?.(event.pointerId)) {
+          button.releasePointerCapture?.(event.pointerId);
+        }
         this.touchState[action] = false;
       };
 
@@ -111,6 +115,8 @@ export class InputController {
       button.addEventListener('pointerup', release);
       button.addEventListener('pointercancel', release);
       button.addEventListener('pointerleave', release);
+      button.addEventListener('contextmenu', release);
+      button.addEventListener('selectstart', (event) => event.preventDefault());
     });
   }
 

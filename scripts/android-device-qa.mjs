@@ -48,6 +48,15 @@ function hasFatalLog(log) {
   return /FATAL EXCEPTION|AndroidRuntime|Uncaught|TypeError|ReferenceError/i.test(log);
 }
 
+function readPngSize(filePath) {
+  const buffer = fs.readFileSync(filePath);
+  if (buffer.length < 24 || buffer.toString('ascii', 1, 4) !== 'PNG') return null;
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20)
+  };
+}
+
 const report = {
   apk: apkPath,
   screenshot: screenshotPath,
@@ -96,7 +105,10 @@ try {
   report.visualCapture = report.lockscreenActive ? 'blocked-by-secure-lockscreen' : 'captured';
 
   if (!report.lockscreenActive) {
-    adb(['shell', 'input', 'tap', '620', '860']);
+    const menuSize = readPngSize(menuScreenshotPath);
+    const tapX = menuSize ? Math.round(menuSize.width * 0.603) : 1410;
+    const tapY = menuSize ? Math.round(menuSize.height * 0.194) : 210;
+    adb(['shell', 'input', 'tap', String(tapX), String(tapY)]);
     report.gameplayTapped = true;
     execFileSync('powershell', ['-NoProfile', '-Command', 'Start-Sleep -Seconds 3'], { stdio: 'ignore' });
     adb(['shell', 'screencap', '-p', '/sdcard/unxpected_gameplay.png']);

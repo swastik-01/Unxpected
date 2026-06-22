@@ -198,7 +198,7 @@ const tutorialSteps: TutorialStepDefinition[] = [
   },
   {
     id: 'complete',
-    title: 'Training synced',
+    title: 'Route synced',
     body: 'You now know the core loop: move, jump, dash, collect, read warnings, and survive the AI route changes.',
     objective: 'Objective: finish the run through the portal',
     tone: 'success'
@@ -238,6 +238,7 @@ export class GameScene extends Phaser.Scene {
   private stationaryMs = 0;
   private lastActionTimeMs = 0;
   private dashReadyAt = 0;
+  private lastDashDeniedAt = -Infinity;
   private dashVisualUntil = 0;
   private dashUsedThisRun = false;
   private jumpBufferedUntil = 0;
@@ -335,9 +336,16 @@ export class GameScene extends Phaser.Scene {
 
   setPaused(paused: boolean) {
     this.pausedByUi = paused;
-    if (paused) this.physics.pause();
-    else this.physics.resume();
-    this.audio.setMusicIntensity(paused ? 0.08 : this.getMusicIntensity());
+    if (paused) {
+      this.sceneConfig.input.releaseAll();
+      this.physics.pause();
+      this.audio.stopMusic();
+      return;
+    }
+
+    this.physics.resume();
+    this.audio.startMusic(this.getMusicIntensity());
+    this.audio.setMusicIntensity(this.getMusicIntensity());
   }
 
   private getAccessibility() {
@@ -618,6 +626,10 @@ export class GameScene extends Phaser.Scene {
       this.audio.play('dash');
       this.shakeCamera(0.0024, 70);
       this.flashCamera(0x45d7ff, 55);
+    } else if (dashPressed && time - this.lastDashDeniedAt > 260) {
+      this.lastDashDeniedAt = time;
+      this.spawnFloatText('Dash charging', this.player.x, this.player.y - 46, '#ffd166');
+      this.flashCamera(0xffd166, 28);
     }
   }
 

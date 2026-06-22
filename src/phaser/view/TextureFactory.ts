@@ -35,12 +35,23 @@ function withGraphics(scene: Phaser.Scene, key: string, draw: (graphics: Phaser.
 
 function makeBlock(scene: Phaser.Scene, key: string, fill: number, stroke: number) {
   withGraphics(scene, key, (graphics) => {
+    graphics.fillStyle(0x070914, 0.92);
+    graphics.fillRoundedRect(3, 13, 90, 72, 7);
     graphics.fillStyle(fill, 1);
-    graphics.fillRoundedRect(4, 12, 88, 70, 8);
-    graphics.lineStyle(5, stroke, 0.8);
-    graphics.strokeRoundedRect(4, 12, 88, 70, 8);
-    graphics.fillStyle(0xffffff, 0.15);
-    graphics.fillRect(11, 18, 74, 8);
+    graphics.fillRoundedRect(5, 15, 86, 68, 6);
+    graphics.fillStyle(0xffffff, 0.18);
+    graphics.fillRoundedRect(9, 18, 78, 9, 4);
+    graphics.fillStyle(0x070914, 0.24);
+    graphics.fillRect(8, 68, 80, 11);
+    graphics.lineStyle(3, stroke, 0.78);
+    graphics.lineBetween(8, 30, 88, 30);
+    graphics.lineBetween(18, 34, 18, 69);
+    graphics.lineBetween(48, 34, 48, 69);
+    graphics.lineBetween(78, 34, 78, 69);
+    graphics.lineStyle(5, stroke, 0.86);
+    graphics.strokeRoundedRect(5, 15, 86, 68, 6);
+    graphics.lineStyle(2, 0xffffff, 0.2);
+    graphics.lineBetween(12, 20, 84, 20);
   });
 }
 
