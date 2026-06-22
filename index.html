@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#090b12" />
+    <title>Unxpected</title>
+  </head>
+  <body>
+    <main id="app">
+      <section id="game-shell" aria-label="Unxpected game area">
+        <div id="game-container"></div>
+
+        <div id="hud" class="hud hud--hidden" aria-live="polite">
+          <div class="hud__cluster hud__cluster--primary">
+            <div>
+              <span class="hud__label">Run</span>
+              <strong id="hud-mode">Run</strong>
+            </div>
+            <div>
+              <span class="hud__label">AI</span>
+              <strong id="hud-profile">Watching</strong>
+            </div>
+            <div>
+              <span class="hud__label">Fails</span>
+              <strong id="hud-deaths">0</strong>
+            </div>
+            <div class="hud__debug" hidden>
+              <span class="hud__label">Trust</span>
+              <strong id="hud-trust">100%</strong>
+            </div>
+            <div class="dash-meter" aria-label="Dash charge">
+              <span class="hud__label">Dash</span>
+              <span class="dash-meter__track"><span id="dash-meter-fill" class="dash-meter__fill"></span></span>
+            </div>
+          </div>
+
+          <div class="hud__cluster hud__cluster--run">
+            <div>
+              <span class="hud__label">Time</span>
+              <strong id="hud-time">0:00.00</strong>
+            </div>
+            <div>
+              <span class="hud__label">Coins</span>
+              <strong id="hud-coins">0/0</strong>
+            </div>
+            <div>
+              <span class="hud__label">Score</span>
+              <strong id="hud-score">0</strong>
+            </div>
+          </div>
+
+          <div class="hud__cluster hud__cluster--secondary">
+            <span id="hud-notice">Director dormant</span>
+            <button id="pause-button" type="button" aria-label="Pause game">II</button>
+          </div>
+
+          <div id="mutation-feed" class="mutation-feed" aria-label="Recent adaptive mutations"></div>
+        </div>
+
+        <div id="mobile-controls" class="mobile-controls mobile-controls--hidden" aria-label="Touch controls">
+          <div class="mobile-controls__move">
+            <button data-action="left" type="button" aria-label="Move left"><span aria-hidden="true">&#8592;</span></button>
+            <button data-action="right" type="button" aria-label="Move right"><span aria-hidden="true">&#8594;</span></button>
+          </div>
+          <div class="mobile-controls__actions">
+            <button data-action="dash" type="button" aria-label="Dash">Dash</button>
+            <button data-action="jump" type="button" aria-label="Jump">Jump</button>
+          </div>
+        </div>
+
+        <section id="rotate-device" class="rotate-device" aria-label="Rotate device">
+          <div class="rotate-device__panel">
+            <strong>Rotate to landscape</strong>
+            <span>Unxpected is tuned for wide-screen platforming.</span>
+          </div>
+        </section>
+
+        <section id="tutorial-card" class="tutorial-card tutorial-card--hidden" aria-label="Training objective" aria-live="polite">
+          <div class="tutorial-card__panel">
+            <div class="tutorial-card__meta">
+              <span id="tutorial-step">Step 1/6</span>
+              <span class="tutorial-card__bar"><span id="tutorial-progress" class="tutorial-card__bar-fill"></span></span>
+              <button id="tutorial-skip-button" class="tutorial-card__skip" type="button">Skip</button>
+            </div>
+            <strong id="tutorial-title">Move</strong>
+            <p id="tutorial-body">Move right to start reading the level.</p>
+            <span id="tutorial-objective" class="tutorial-card__objective">Objective: move right</span>
+          </div>
+        </section>
+
+        <section id="menu" class="menu" aria-label="Main menu">
+          <div class="menu__panel">
+            <p class="menu__eyebrow">Adaptive Platformer</p>
+            <h1>Unxpected</h1>
+            <p>
+              A schema-driven trap runner where the level studies your habits and mutates
+              while you play.
+            </p>
+            <div class="menu__settings">
+              <label for="aggression">AI aggression</label>
+              <input id="aggression" type="range" min="0" max="100" value="62" />
+              <output id="aggression-output" for="aggression">62%</output>
+            </div>
+            <section class="menu__section menu__section--pilot" aria-label="Player profile">
+              <div class="menu__section-head">
+                <strong>Pilot</strong>
+                <span id="player-status">Local profile</span>
+              </div>
+              <label for="player-name">Name<input id="player-name" type="text" maxlength="18" autocomplete="nickname" placeholder="Runner" /></label>
+            </section>
+            <div class="menu__actions">
+              <button id="start-button" type="button">Start Run</button>
+              <button id="training-button" type="button">Training Mode</button>
+              <button id="daily-button" type="button">Daily Anomaly</button>
+            </div>
+            <section class="menu__section" aria-label="Campaign levels">
+              <div class="menu__section-head">
+                <strong>Campaign</strong>
+                <span id="campaign-progress">Unlocked 1/99</span>
+              </div>
+              <div class="level-picker">
+                <button id="level-prev-button" type="button" aria-label="Previous unlocked level">&#8592;</button>
+                <label for="level-select">Level<select id="level-select"></select></label>
+                <button id="level-next-button" type="button" aria-label="Next unlocked level">&#8594;</button>
+              </div>
+              <p id="campaign-copy">Clear Level 1 to unlock Level 2.</p>
+            </section>
+            <section class="menu__section" aria-label="Daily anomaly">
+              <div class="menu__section-head">
+                <strong id="daily-title">Daily Anomaly</strong>
+                <span id="daily-streak">Streak 0</span>
+              </div>
+              <p id="daily-copy">A new seeded mutation route appears every day.</p>
+            </section>
+            <section class="menu__section" aria-label="Progression">
+              <div class="menu__section-head">
+                <strong>Progression</strong>
+                <span id="progression-xp">XP 0</span>
+              </div>
+              <div class="cosmetic-selectors">
+                <label>Skin<select id="skin-select"></select></label>
+                <label>Trail<select id="trail-select"></select></label>
+                <label>Death FX<select id="death-effect-select"></select></label>
+                <label>Portal FX<select id="portal-effect-select"></select></label>
+              </div>
+            </section>
+            <section class="menu__section" aria-label="Accessibility settings">
+              <div class="menu__section-head">
+                <strong>Settings</strong>
+                <span id="settings-status">Standard UI</span>
+              </div>
+              <div class="settings-grid">
+                <label><input id="audio-toggle" type="checkbox" checked /> Audio</label>
+                <label><input id="motion-toggle" type="checkbox" /> Reduced motion</label>
+                <label><input id="color-safe-toggle" type="checkbox" /> Color-safe warnings</label>
+                <label>UI Scale<select id="ui-scale-select"><option value="compact">Compact</option><option value="standard">Standard</option><option value="large">Large</option></select></label>
+              </div>
+            </section>
+            <section class="menu__section" aria-label="Local leaderboard">
+              <div class="menu__section-head">
+                <strong>Local Leaderboard</strong>
+                <span id="leaderboard-status">Top runs</span>
+              </div>
+              <ol id="local-leaderboard" class="local-leaderboard"></ol>
+            </section>
+            <section class="menu__section" aria-label="Global leaderboard">
+              <div class="menu__section-head">
+                <strong>Global Leaderboard</strong>
+                <span id="global-leaderboard-status">Offline</span>
+              </div>
+              <ol id="global-leaderboard" class="local-leaderboard"></ol>
+            </section>
+            <p class="menu__meta">
+              Keyboard: arrows or A/D to move, Space/W to jump, Shift/K to dash, Esc to pause. Mobile: use the on-screen arrows, Jump, and Dash.
+            </p>
+          </div>
+        </section>
+
+        <section id="pause-menu" class="pause-menu pause-menu--hidden" aria-label="Pause menu">
+          <div class="pause-menu__panel">
+            <h2 id="pause-title">Paused</h2>
+            <section id="run-summary" class="run-summary run-summary--hidden" aria-label="Run recap">
+              <div class="run-summary__hero">
+                <div>
+                  <span>Rank</span>
+                  <strong id="summary-grade">C</strong>
+                  <small id="summary-best">Best 0</small>
+                </div>
+                <div>
+                  <span>Score</span>
+                  <strong id="summary-score">0</strong>
+                  <small id="summary-personal-best">New personal best</small>
+                </div>
+              </div>
+              <div class="run-summary__stats">
+                <div><span>Time</span><strong id="summary-time">0:00.00</strong></div>
+                <div><span>Coins</span><strong id="summary-coins">0/0</strong></div>
+                <div><span>Deaths</span><strong id="summary-deaths">0</strong></div>
+                <div><span>Mutations</span><strong id="summary-mutations">0</strong></div>
+                <div><span>Trust</span><strong id="summary-trust">100%</strong></div>
+              </div>
+              <div class="run-summary__block">
+                <h3>Progression</h3>
+                <div id="summary-progression" class="run-summary__progression"></div>
+              </div>
+              <div class="run-summary__block">
+                <h3>Local Missions</h3>
+                <div id="summary-missions" class="run-summary__missions"></div>
+              </div>
+              <div class="run-summary__block">
+                <h3>Observer Recap</h3>
+                <ul id="summary-recap" class="run-summary__recap"></ul>
+              </div>
+              <div class="run-summary__block">
+                <h3>Leaderboard</h3>
+                <span id="summary-global-status" class="run-summary__global-status">Global leaderboard offline</span>
+                <ol id="summary-leaderboard" class="run-summary__leaderboard"></ol>
+              </div>
+            </section>
+            <button id="resume-button" type="button">Resume</button>
+            <button id="restart-button" type="button">Restart Run</button>
+            <button id="quit-button" type="button">Quit to Menu</button>
+          </div>
+        </section>
+
+        <section id="system-spoof" class="system-spoof system-spoof--hidden" aria-label="Paradox overlay">
+          <div>
+            <strong>Unxpected Overlay</strong>
+            <span id="spoof-text">Controls reconfigured</span>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

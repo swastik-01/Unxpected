@@ -1,0 +1,145 @@
+Unxpected: AI-Driven Adaptive Platformer
+Technical Architecture & Pitch Report
+1. Executive Summary
+Traditional "troll games" rely on hardcoded traps. Once a player memorizes the level layout, the challenge evaporates, and the game loses its viral streaming value. Unxpected introduces a real-time AI feedback loop that treats the level itself as an active opponent. By tracking live player telemetry, a hybrid machine learning and procedural generation system adapts traps dynamically, ensuring that every playthrough is fundamentally unique, unpredictable, and optimized for maximum viewer engagement.
+2. High-Level System Architecture
+To maintain a responsive 60 FPS mobile experience, the heavy AI computation is decoupled from the rendering engine. The architecture relies on a ultra-low-latency asymmetric loop.
+
+
+
+
+A. The Game Client (Edge Platform)
+* Role: Runs the presentation layer and physics engine.
+* Action: Renders levels out of JSON schemas received from the server. It strips away hardcoded level logic, treating the canvas as a dynamic matrix where properties (gravity, collision masks, button mappings) can be modified mid-frame by external state files.
+* Telemetry Ingestion: Every frame tracks coordinates, controller inputs, time-to-jump, velocity, death vectors, and checkpoint wait times, batching them every 500ms to the server.
+B. The API & Stream Layer
+* Role: Facilitates real-time, bi-directional communication.
+* Action: Employs persistent WebSockets for low-latency state mutations during active gameplay, falling back to lightweight REST endpoints during level transitions and loading screens.
+C. The Backend AI Orchestrator
+* Telemetry Analysis Engine: A lightweight Reinforcement Learning (RL) model evaluates the player's playstyle archetype (e.g., Speedrunner, Panicked, Methodical, Overly Cautious).
+* Procedural Mutation Engine: Takes the output of the player analysis and processes it through a deterministic Rule Mutation Graph to construct the next level configuration payload without creating mathematically impossible scenarios.
+3. Core AI Integration & Mechanisms
+The AI functions via a continuous loop: Observe $\rightarrow$ Analyze $\rightarrow$ Mutate.
+ Observe (Player Input, Death Locations, Hesitation Zones)
+              │
+              ▼
+  Analyze (Classify Archetype & Detect Behavioral Flaws)
+              │
+              ▼
+  Mutate  (Rewrite Physics, Swap Assets, Dynamic Traps)
+
+
+Phase 1: Behavioral Profiling (The Observer)
+The AI tracks continuous variables to pinpoint exactly when and where a player feels safe or established in a pattern:
+* Holding Patterns: Time spent stationary before an obstacle (indicates hesitation).
+* Input Variance: Fluctuations in button-press intervals (indicates panic/mashing).
+* Spatial Heatmaps: Exact coordinate coordinates where the player frequently dies or lands safely.
+Phase 2: The Mutation Framework (The Executioner)
+Instead of relying on deep learning to generate visual graphics (which is too slow), the AI modifies the Metadata Layer of the game variables. It executes mutations across three distinct tiers:
+Mutation Category
+	Mechanism
+	Example Troll Scenario
+	Physics Gaslighting
+	Modifies the environmental constant arrays mid-air.
+	The AI detects a long jump over a pit. The moment the player reaches the apex, gravity shifts horizontally, dragging them backward into a hidden wall spike.
+	Semantic Asset Scrambling
+	Rotates item collision flags based on historical player trust.
+	The player safely collects 5 gold coins. On the 6th coin, the AI dynamically swaps the asset's flag to an active spike hitbox right before contact.
+	Input Redirection
+	Intercepts controller configurations dynamically based on input frequency.
+	The AI notices the player is panic-mashing the jump button near a ledge. It instantly remaps the "Jump" trigger to "Drop Down" or opens a fake pop-up configuration screen.
+	4. Real-World Pitch Examples
+Example A: The Speedrunner's Pitfall
+* Player Profile: Moves at maximum terminal velocity, performs frame-perfect jumps, rarely stops at platforms.
+* AI Counter-Strategy: The AI calculates the exact predictive trajectory of the speedrunner. Instead of generating a standard static platform, it creates a "Schrödinger Platform"—it appears solid, but its collision detection only activates if the player's approach velocity is below a specific speed threshold. The speedrunner passes right through it into an abyss.
+Example B: The Safe-Zoner Punisher
+* Player Profile: Cautious, inches forward slowly, waits 3 seconds at every safe platform to observe patterns.
+* AI Counter-Strategy: The AI flags the player's favorite waiting zones. The next time the player remains stationary on a safe block for more than 1.5 seconds, the block turns into a controllable elevator that rapidly exits the top of the screen, crushing them into the ceiling boundary.
+5. Architectural Flow & Strategy Explorer
+To visualize how telemetry data streams from the player’s device into the AI orchestrator to dynamically synthesize a customized mutation payload, explore the simulation below. You can adjust the player profile, AI aggression level, and mutation style to see how the system computes metrics and generates dynamic level variables in real-time.
+To make this system work, the game client must operate like a headless frontend. It shouldn't hold any rigid game logic; instead, it purely renders the state dictated by the backend API payload.
+By passing the rules of the level as a dynamic JSON object, the AI can rewrite the game's physics, entity behaviors, and UI on the fly.
+Here is the core JSON schema architecture designed to deliver these real-time mutations with minimal latency.
+The Dynamic Level Schema
+This payload is sent to the client via WebSockets immediately after the AI processes a batch of player telemetry, dictating the exact state and upcoming trap triggers for the current loaded chunk.
+JSON
+{
+  "session_id": "px_8923_alpha",
+  "tick_sequence": 4052,
+  "global_environment": {
+    "gravity_vector": { "x": 0.0, "y": -9.81 },
+    "friction_multiplier": 1.0,
+    "camera_lock": false
+  },
+  "input_hijack": {
+    "active": true,
+    "mapping": {
+      "jump_button": "action_dash",
+      "move_left": "move_right",
+      "move_right": "move_left"
+    },
+    "ui_spoofing": {
+      "trigger_fake_popup": "low_battery_warning",
+      "delay_ms": 1500
+    }
+  },
+  "entities": [
+    {
+      "entity_id": "obj_ground_04",
+      "base_type": "platform",
+      "transform": { "x": 12.5, "y": -2.0, "width": 5.0, "height": 1.0 },
+      "render_layer": "visual_grass_block",
+      "collision_mask": "solid",
+      "mutation_event": null
+    },
+    {
+      "entity_id": "obj_coin_01",
+      "base_type": "collectible",
+      "transform": { "x": 14.0, "y": 3.0, "width": 1.0, "height": 1.0 },
+      "render_layer": "visual_gold_coin",
+      "collision_mask": "trigger_pickup",
+      "mutation_event": {
+        "trigger_condition": "player_distance_less_than",
+        "condition_value": 2.0,
+        "action": "semantic_scramble",
+        "mutated_state": {
+          "render_layer": "visual_gold_coin",
+          "collision_mask": "lethal_hazard",
+          "velocity": { "x": 0.0, "y": -15.0 }
+        }
+      }
+    },
+    {
+      "entity_id": "obj_invisible_wall_01",
+      "base_type": "hazard",
+      "transform": { "x": 16.0, "y": 1.5, "width": 1.0, "height": 5.0 },
+      "render_layer": "transparent",
+      "collision_mask": "pass_through",
+      "mutation_event": {
+        "trigger_condition": "player_input_active",
+        "condition_value": "jump_button",
+        "action": "physics_gaslight",
+        "mutated_state": {
+          "render_layer": "visual_brick_wall",
+          "collision_mask": "solid"
+        }
+      }
+    }
+  ]
+}
+
+
+Schema Component Breakdown
+1. global_environment (The Physics Gaslighter)
+This object controls the mathematical constants of the level. By keeping this dynamic, the AI can instantly invert gravity mid-jump by passing {"y": 9.81} or create "ice physics" by dropping the friction_multiplier to 0.1 precisely when the player attempts to brake near a ledge.
+2. input_hijack (The UI & Controller Spoofer)
+This node intercepts the DOM or native input listeners.
+* mapping: Reassigns the device's physical touches or controller inputs. If the AI detects the player is relying too heavily on muscle memory, it simply swaps the left and right movement vectors.
+* ui_spoofing: Triggers overlay events built into the client, such as fake battery warnings or fake "Level Complete" screens that actually act as lethal platforms.
+3. entities (The Asset Scrambler)
+The entities array completely decouples what an object looks like from what an object does.
+* render_layer vs. collision_mask: A block can render as a visual_gold_coin but have the collision mask of a lethal_hazard.
+* mutation_event: This is where the real-time AI logic is localized. Instead of the server sending 60 updates a second, the server anticipates the player's action and sends a "trap logic bomb."
+   * In the schema above, obj_coin_01 looks and acts like a coin until the player gets within 2.0 units of it. The client then executes the mutated_state, turning the coin into a deadly projectile that drops on the player.
+Why This Architecture Scales
+By using a headless, schema-driven approach, the client-side code remains incredibly thin. You do not need to write complex C# or GDScript for thousands of different trap permutations. The game engine simply iterates over the JSON array, rendering the coordinates and applying the assigned physics properties. When a trigger_condition is met, the client locally updates the object with the mutated_state, requiring zero additional server round-trips to spring the trap.

@@ -1,0 +1,41 @@
+{
+  "name": "unxpected",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unxpected: an adaptive AI-driven platformer prepared for Android distribution.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run",
+    "test:qa": "node scripts/game-qa.mjs",
+    "test:watch": "vitest",
+    "android:add": "cap add android",
+    "android:sync": "npm run build && cap sync android",
+    "android:build": "node scripts/build-android-release.mjs",
+    "android:open": "cap open android",
+    "android:qa-device": "node scripts/android-device-qa.mjs",
+    "export:engine": "node scripts/export-engine-handoff.mjs"
+  },
+  "keywords": [
+    "phaser",
+    "capacitor",
+    "platformer",
+    "adaptive-ai"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
+  }
+}

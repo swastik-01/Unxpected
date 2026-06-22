@@ -1,0 +1,1099 @@
+{
+  "project": "Unxpected",
+  "sourceRuntime": "Phaser 3 Arcade Physics",
+  "coordinateSystem": {
+    "sourceUnits": "pixels",
+    "blenderScale": "1 pixel = 0.01 Blender meters",
+    "unrealScale": "1 pixel = 1 Unreal centimeter",
+    "origin": "source top-left converted to centered 3D blockout coordinates"
+  },
+  "levels": [
+    {
+      "levelIndex": 1,
+      "noCheckpoints": true,
+      "playerStart": {
+        "x": 120,
+        "y": 560,
+        "width": 34,
+        "height": 52
+      },
+      "world": {
+        "width": 4300,
+        "height": 980
+      },
+      "entities": [
+        {
+          "id": "ground_00",
+          "type": "platform",
+          "x": 0,
+          "y": 650,
+          "width": 720,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "ground_01",
+          "type": "platform",
+          "x": 730,
+          "y": 650,
+          "width": 340,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "wait_lift_01",
+          "type": "platform",
+          "x": 1120,
+          "y": 580,
+          "width": 220,
+          "height": 38,
+          "collision": "solid",
+          "mutation": "elevator_crush",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "collapse_01",
+          "type": "platform",
+          "x": 1400,
+          "y": 650,
+          "width": 300,
+          "height": 70,
+          "collision": "solid",
+          "mutation": "floor_collapse",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "phase_01",
+          "type": "platform",
+          "x": 1810,
+          "y": 545,
+          "width": 210,
+          "height": 35,
+          "collision": "solid",
+          "mutation": "platform_phase",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "ground_03",
+          "type": "platform",
+          "x": 2140,
+          "y": 650,
+          "width": 330,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "jump_wall_sensor",
+          "type": "platform",
+          "x": 2540,
+          "y": 465,
+          "width": 42,
+          "height": 185,
+          "collision": "sensor",
+          "mutation": "physics_gaslight",
+          "blenderMaterial": "sensor_blue"
+        },
+        {
+          "id": "ground_04",
+          "type": "platform",
+          "x": 2715,
+          "y": 650,
+          "width": 340,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "mercy_bridge",
+          "type": "platform",
+          "x": 3065,
+          "y": 612,
+          "width": 230,
+          "height": 32,
+          "collision": "sensor",
+          "mutation": "mercy_bridge",
+          "blenderMaterial": "sensor_blue"
+        },
+        {
+          "id": "ground_05",
+          "type": "platform",
+          "x": 3380,
+          "y": 650,
+          "width": 740,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "coin_00",
+          "type": "collectible",
+          "x": 520,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_01",
+          "type": "collectible",
+          "x": 900,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_scramble_02",
+          "type": "collectible",
+          "x": 1535,
+          "y": 578,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_03",
+          "type": "collectible",
+          "x": 2235,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_scramble_04",
+          "type": "collectible",
+          "x": 2875,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "spike_00",
+          "type": "hazard",
+          "x": 1040,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "spike_01",
+          "type": "hazard",
+          "x": 1680,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "spike_02",
+          "type": "hazard",
+          "x": 2485,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "projectile_01",
+          "type": "hazard",
+          "x": 2360,
+          "y": 602,
+          "width": 58,
+          "height": 18,
+          "collision": "sensor",
+          "mutation": "weapon_fire",
+          "blenderMaterial": "hazard_warning"
+        },
+        {
+          "id": "goal_01",
+          "type": "goal",
+          "x": 3980,
+          "y": 530,
+          "width": 72,
+          "height": 120,
+          "collision": "goal",
+          "mutation": null,
+          "blenderMaterial": "portal_green"
+        }
+      ]
+    },
+    {
+      "levelIndex": 25,
+      "noCheckpoints": true,
+      "playerStart": {
+        "x": 120,
+        "y": 560,
+        "width": 34,
+        "height": 52
+      },
+      "world": {
+        "width": 4300,
+        "height": 980
+      },
+      "entities": [
+        {
+          "id": "ground_00",
+          "type": "platform",
+          "x": 0,
+          "y": 650,
+          "width": 720,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "ground_01",
+          "type": "platform",
+          "x": 730,
+          "y": 650,
+          "width": 340,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "wait_lift_01",
+          "type": "platform",
+          "x": 1120,
+          "y": 580,
+          "width": 220,
+          "height": 38,
+          "collision": "solid",
+          "mutation": "elevator_crush",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "collapse_01",
+          "type": "platform",
+          "x": 1400,
+          "y": 650,
+          "width": 300,
+          "height": 70,
+          "collision": "solid",
+          "mutation": "floor_collapse",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "phase_01",
+          "type": "platform",
+          "x": 1810,
+          "y": 545,
+          "width": 210,
+          "height": 35,
+          "collision": "solid",
+          "mutation": "platform_phase",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "ground_03",
+          "type": "platform",
+          "x": 2140,
+          "y": 650,
+          "width": 330,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "jump_wall_sensor",
+          "type": "platform",
+          "x": 2540,
+          "y": 465,
+          "width": 42,
+          "height": 185,
+          "collision": "sensor",
+          "mutation": "physics_gaslight",
+          "blenderMaterial": "sensor_blue"
+        },
+        {
+          "id": "ground_04",
+          "type": "platform",
+          "x": 2715,
+          "y": 650,
+          "width": 340,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "mercy_bridge",
+          "type": "platform",
+          "x": 3065,
+          "y": 612,
+          "width": 230,
+          "height": 32,
+          "collision": "sensor",
+          "mutation": "mercy_bridge",
+          "blenderMaterial": "sensor_blue"
+        },
+        {
+          "id": "ground_05",
+          "type": "platform",
+          "x": 3380,
+          "y": 650,
+          "width": 740,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "variant_riser_01",
+          "type": "platform",
+          "x": 740,
+          "y": 492,
+          "width": 178,
+          "height": 30,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "timer_shot_01",
+          "type": "hazard",
+          "x": 3270,
+          "y": 548,
+          "width": 58,
+          "height": 18,
+          "collision": "sensor",
+          "mutation": "weapon_fire",
+          "blenderMaterial": "hazard_warning"
+        },
+        {
+          "id": "collapse_02",
+          "type": "platform",
+          "x": 975,
+          "y": 650,
+          "width": 185,
+          "height": 70,
+          "collision": "solid",
+          "mutation": "floor_collapse",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "coin_high_variant",
+          "type": "collectible",
+          "x": 2050,
+          "y": 436,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_or_lethal",
+          "mutation": "semantic_scramble",
+          "blenderMaterial": "coin_unstable"
+        },
+        {
+          "id": "coin_00",
+          "type": "collectible",
+          "x": 520,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_01",
+          "type": "collectible",
+          "x": 900,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_scramble_02",
+          "type": "collectible",
+          "x": 1535,
+          "y": 578,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_or_lethal",
+          "mutation": "semantic_scramble",
+          "blenderMaterial": "coin_unstable"
+        },
+        {
+          "id": "coin_03",
+          "type": "collectible",
+          "x": 2235,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_scramble_04",
+          "type": "collectible",
+          "x": 2875,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_or_lethal",
+          "mutation": "semantic_scramble",
+          "blenderMaterial": "coin_unstable"
+        },
+        {
+          "id": "spike_00",
+          "type": "hazard",
+          "x": 1040,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "spike_01",
+          "type": "hazard",
+          "x": 1680,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "spike_02",
+          "type": "hazard",
+          "x": 2485,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "projectile_01",
+          "type": "hazard",
+          "x": 2360,
+          "y": 602,
+          "width": 58,
+          "height": 18,
+          "collision": "sensor",
+          "mutation": "weapon_fire",
+          "blenderMaterial": "hazard_warning"
+        },
+        {
+          "id": "goal_01",
+          "type": "goal",
+          "x": 3980,
+          "y": 530,
+          "width": 72,
+          "height": 120,
+          "collision": "goal",
+          "mutation": null,
+          "blenderMaterial": "portal_green"
+        }
+      ]
+    },
+    {
+      "levelIndex": 50,
+      "noCheckpoints": true,
+      "playerStart": {
+        "x": 120,
+        "y": 560,
+        "width": 34,
+        "height": 52
+      },
+      "world": {
+        "width": 4300,
+        "height": 980
+      },
+      "entities": [
+        {
+          "id": "ground_00",
+          "type": "platform",
+          "x": 0,
+          "y": 650,
+          "width": 720,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "ground_01",
+          "type": "platform",
+          "x": 730,
+          "y": 650,
+          "width": 340,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "wait_lift_01",
+          "type": "platform",
+          "x": 1120,
+          "y": 580,
+          "width": 220,
+          "height": 38,
+          "collision": "solid",
+          "mutation": "elevator_crush",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "collapse_01",
+          "type": "platform",
+          "x": 1400,
+          "y": 650,
+          "width": 300,
+          "height": 70,
+          "collision": "solid",
+          "mutation": "floor_collapse",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "phase_01",
+          "type": "platform",
+          "x": 1810,
+          "y": 545,
+          "width": 210,
+          "height": 35,
+          "collision": "solid",
+          "mutation": "platform_phase",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "ground_03",
+          "type": "platform",
+          "x": 2140,
+          "y": 650,
+          "width": 330,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "jump_wall_sensor",
+          "type": "platform",
+          "x": 2540,
+          "y": 465,
+          "width": 42,
+          "height": 185,
+          "collision": "sensor",
+          "mutation": "physics_gaslight",
+          "blenderMaterial": "sensor_blue"
+        },
+        {
+          "id": "ground_04",
+          "type": "platform",
+          "x": 2715,
+          "y": 650,
+          "width": 340,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "mercy_bridge",
+          "type": "platform",
+          "x": 3065,
+          "y": 612,
+          "width": 230,
+          "height": 32,
+          "collision": "sensor",
+          "mutation": "mercy_bridge",
+          "blenderMaterial": "sensor_blue"
+        },
+        {
+          "id": "ground_05",
+          "type": "platform",
+          "x": 3380,
+          "y": 650,
+          "width": 740,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "variant_riser_01",
+          "type": "platform",
+          "x": 610,
+          "y": 548,
+          "width": 178,
+          "height": 30,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "timer_shot_01",
+          "type": "hazard",
+          "x": 3270,
+          "y": 588,
+          "width": 58,
+          "height": 18,
+          "collision": "sensor",
+          "mutation": "weapon_fire",
+          "blenderMaterial": "hazard_warning"
+        },
+        {
+          "id": "collapse_02",
+          "type": "platform",
+          "x": 865,
+          "y": 650,
+          "width": 185,
+          "height": 70,
+          "collision": "solid",
+          "mutation": "floor_collapse",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "coin_high_variant",
+          "type": "collectible",
+          "x": 1960,
+          "y": 470,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_or_lethal",
+          "mutation": "semantic_scramble",
+          "blenderMaterial": "coin_unstable"
+        },
+        {
+          "id": "coin_00",
+          "type": "collectible",
+          "x": 520,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_01",
+          "type": "collectible",
+          "x": 900,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_scramble_02",
+          "type": "collectible",
+          "x": 1535,
+          "y": 578,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_or_lethal",
+          "mutation": "semantic_scramble",
+          "blenderMaterial": "coin_unstable"
+        },
+        {
+          "id": "coin_03",
+          "type": "collectible",
+          "x": 2235,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_scramble_04",
+          "type": "collectible",
+          "x": 2875,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_or_lethal",
+          "mutation": "semantic_scramble",
+          "blenderMaterial": "coin_unstable"
+        },
+        {
+          "id": "spike_00",
+          "type": "hazard",
+          "x": 1040,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "spike_01",
+          "type": "hazard",
+          "x": 1680,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "spike_02",
+          "type": "hazard",
+          "x": 2485,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "projectile_01",
+          "type": "hazard",
+          "x": 2360,
+          "y": 602,
+          "width": 58,
+          "height": 18,
+          "collision": "sensor",
+          "mutation": "weapon_fire",
+          "blenderMaterial": "hazard_warning"
+        },
+        {
+          "id": "goal_01",
+          "type": "goal",
+          "x": 3980,
+          "y": 530,
+          "width": 72,
+          "height": 120,
+          "collision": "goal",
+          "mutation": null,
+          "blenderMaterial": "portal_green"
+        }
+      ]
+    },
+    {
+      "levelIndex": 99,
+      "noCheckpoints": true,
+      "playerStart": {
+        "x": 120,
+        "y": 560,
+        "width": 34,
+        "height": 52
+      },
+      "world": {
+        "width": 4300,
+        "height": 980
+      },
+      "entities": [
+        {
+          "id": "ground_00",
+          "type": "platform",
+          "x": 0,
+          "y": 650,
+          "width": 720,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "ground_01",
+          "type": "platform",
+          "x": 730,
+          "y": 650,
+          "width": 340,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "wait_lift_01",
+          "type": "platform",
+          "x": 1120,
+          "y": 580,
+          "width": 220,
+          "height": 38,
+          "collision": "solid",
+          "mutation": "elevator_crush",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "collapse_01",
+          "type": "platform",
+          "x": 1400,
+          "y": 650,
+          "width": 300,
+          "height": 70,
+          "collision": "solid",
+          "mutation": "floor_collapse",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "phase_01",
+          "type": "platform",
+          "x": 1810,
+          "y": 545,
+          "width": 210,
+          "height": 35,
+          "collision": "solid",
+          "mutation": "platform_phase",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "ground_03",
+          "type": "platform",
+          "x": 2140,
+          "y": 650,
+          "width": 330,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "jump_wall_sensor",
+          "type": "platform",
+          "x": 2540,
+          "y": 465,
+          "width": 42,
+          "height": 185,
+          "collision": "sensor",
+          "mutation": "physics_gaslight",
+          "blenderMaterial": "sensor_blue"
+        },
+        {
+          "id": "ground_04",
+          "type": "platform",
+          "x": 2715,
+          "y": 650,
+          "width": 340,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "mercy_bridge",
+          "type": "platform",
+          "x": 3065,
+          "y": 612,
+          "width": 230,
+          "height": 32,
+          "collision": "sensor",
+          "mutation": "mercy_bridge",
+          "blenderMaterial": "sensor_blue"
+        },
+        {
+          "id": "ground_05",
+          "type": "platform",
+          "x": 3380,
+          "y": 650,
+          "width": 740,
+          "height": 70,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "variant_riser_01",
+          "type": "platform",
+          "x": 636,
+          "y": 520,
+          "width": 178,
+          "height": 30,
+          "collision": "solid",
+          "mutation": null,
+          "blenderMaterial": "platform_safe"
+        },
+        {
+          "id": "timer_shot_01",
+          "type": "hazard",
+          "x": 3270,
+          "y": 548,
+          "width": 58,
+          "height": 18,
+          "collision": "sensor",
+          "mutation": "weapon_fire",
+          "blenderMaterial": "hazard_warning"
+        },
+        {
+          "id": "collapse_02",
+          "type": "platform",
+          "x": 887,
+          "y": 650,
+          "width": 185,
+          "height": 70,
+          "collision": "solid",
+          "mutation": "floor_collapse",
+          "blenderMaterial": "platform_unstable"
+        },
+        {
+          "id": "coin_high_variant",
+          "type": "collectible",
+          "x": 1978,
+          "y": 436,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_or_lethal",
+          "mutation": "semantic_scramble",
+          "blenderMaterial": "coin_unstable"
+        },
+        {
+          "id": "spike_pressure_variant",
+          "type": "hazard",
+          "x": 3107,
+          "y": 574,
+          "width": 38,
+          "height": 76,
+          "collision": "sensor",
+          "mutation": "physics_gaslight",
+          "blenderMaterial": "hazard_warning"
+        },
+        {
+          "id": "coin_00",
+          "type": "collectible",
+          "x": 520,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_01",
+          "type": "collectible",
+          "x": 900,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_scramble_02",
+          "type": "collectible",
+          "x": 1535,
+          "y": 578,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_or_lethal",
+          "mutation": "semantic_scramble",
+          "blenderMaterial": "coin_unstable"
+        },
+        {
+          "id": "coin_03",
+          "type": "collectible",
+          "x": 2235,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_pickup",
+          "mutation": null,
+          "blenderMaterial": "coin_gold"
+        },
+        {
+          "id": "coin_scramble_04",
+          "type": "collectible",
+          "x": 2875,
+          "y": 560,
+          "width": 34,
+          "height": 34,
+          "collision": "trigger_or_lethal",
+          "mutation": "semantic_scramble",
+          "blenderMaterial": "coin_unstable"
+        },
+        {
+          "id": "spike_00",
+          "type": "hazard",
+          "x": 1040,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "spike_01",
+          "type": "hazard",
+          "x": 1680,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "spike_02",
+          "type": "hazard",
+          "x": 2485,
+          "y": 612,
+          "width": 38,
+          "height": 38,
+          "collision": "lethal_hazard",
+          "mutation": null,
+          "blenderMaterial": "hazard_red"
+        },
+        {
+          "id": "projectile_01",
+          "type": "hazard",
+          "x": 2360,
+          "y": 602,
+          "width": 58,
+          "height": 18,
+          "collision": "sensor",
+          "mutation": "weapon_fire",
+          "blenderMaterial": "hazard_warning"
+        },
+        {
+          "id": "goal_01",
+          "type": "goal",
+          "x": 3980,
+          "y": 530,
+          "width": 72,
+          "height": 120,
+          "collision": "goal",
+          "mutation": null,
+          "blenderMaterial": "portal_green"
+        }
+      ]
+    }
+  ]
+}

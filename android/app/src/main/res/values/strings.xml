@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Unxpected</string>
+    <string name="title_activity_main">Unxpected</string>
+    <string name="package_name">com.unexpectedgame.unxpected</string>
+    <string name="custom_url_scheme">com.unexpectedgame.unxpected</string>
+</resources>
