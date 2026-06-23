@@ -18,6 +18,7 @@ import type {
   DynamicLevelSchema,
   EntitySchema,
   HudSnapshot,
+  LevelTheme,
   MenuMode,
   MutationEvent,
   PlayerProfile,
@@ -83,6 +84,8 @@ interface PhysicsDebugSnapshot {
     runComplete: boolean;
     totalCoins: number;
   };
+  routeArchetype: string;
+  theme: string;
   profile: PlayerProfile;
   entities: Record<string, {
     x: number;
@@ -239,6 +242,7 @@ export class GameScene extends Phaser.Scene {
   private lastHudAt = 0;
   private stationaryMs = 0;
   private lastActionTimeMs = 0;
+  private lastAiPlanNoticeAt = -Infinity;
   private dashReadyAt = 0;
   private lastDashDeniedAt = -Infinity;
   private lastShotAt = -Infinity;
@@ -281,18 +285,23 @@ export class GameScene extends Phaser.Scene {
     this.mutationsSurvived = 0;
     this.weaponCharges = 0;
     this.lastShotAt = -Infinity;
+    this.lastAiPlanNoticeAt = -Infinity;
     this.runStartedAt = this.time.now;
     this.routeStartedAt = this.runStartedAt;
     this.profileDecisionReady = false;
     this.totalCoins = this.level.entities.filter((entity) => entity.base_type === 'collectible').length;
     this.currentDecision = {
       profile: 'Balanced',
-      notice: 'AI is watching your run.',
+      notice: `Zone loaded: ${this.level.theme.label}. AI is watching your route.`,
       trust: 1,
       inputHijack: this.level.input_hijack,
       environment: this.level.global_environment,
       mutationBias: ['semantic_scramble'],
-      logEntries: ['AI online']
+      logEntries: [
+        `Zone: ${this.level.theme.label}`,
+        `Route: ${this.level.route_archetype.label}`,
+        'AI online: reading speed, jumps, waits, and deaths'
+      ]
     };
     this.audio.startMusic(this.getMusicIntensity());
 
@@ -402,7 +411,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createWorld() {
-    this.cameras.main.setBackgroundColor('#070914');
+    this.cameras.main.setBackgroundColor(this.level.theme.skyBottom);
     this.addParallax();
     this.createWorldEffects();
     this.createRuntimeEntities();
@@ -490,35 +499,110 @@ export class GameScene extends Phaser.Scene {
   }
 
   private addParallax() {
+    const theme = this.level.theme;
     const back = this.add.graphics();
     back.setDepth(-40);
-    back.fillStyle(0x0d1526, 1);
-    back.fillRect(0, 0, 4300, 720);
-    back.fillStyle(0x111d31, 1);
+    back.fillStyle(this.hexColor(theme.skyTop), 1);
+    back.fillRect(0, 0, 4300, 380);
+    back.fillStyle(this.hexColor(theme.skyBottom), 1);
+    back.fillRect(0, 300, 4300, 420);
+    back.fillStyle(this.hexColor(theme.far), 0.92);
+
     for (let i = 0; i < 42; i += 1) {
       const x = i * 124 + (i % 3) * 36;
       const h = 90 + (i % 5) * 36;
-      back.fillRect(x, 720 - h, 70 + (i % 4) * 24, h);
+      if (theme.id === 'solar_ruins') {
+        back.fillTriangle(x, 720, x + 68, 720 - h, x + 136, 720);
+      } else if (theme.id === 'crystal_cave') {
+        back.fillTriangle(x + 10, 720, x + 52, 720 - h, x + 96, 720);
+      } else if (theme.id === 'overgrown_ruins') {
+        back.fillRoundedRect(x, 720 - h, 78 + (i % 4) * 24, h, 18);
+      } else {
+        back.fillRect(x, 720 - h, 70 + (i % 4) * 24, h);
+      }
     }
-    back.lineStyle(2, 0x45d7ff, 0.16);
-    for (let i = 0; i < 28; i += 1) {
-      back.lineBetween(i * 170, 90 + (i % 6) * 33, i * 170 + 80, 70 + (i % 5) * 40);
-    }
-    back.setScrollFactor(0.28, 0.18);
+
+    this.drawThemeFarMotif(back, theme);
+    back.setScrollFactor(0.25, 0.16);
 
     const mid = this.add.graphics();
     mid.setDepth(-30);
-    mid.lineStyle(1, 0x58f0a7, 0.16);
+    this.drawThemeMidMotif(mid, theme);
+    mid.setScrollFactor(0.42, 0.28);
+  }
+
+  private drawThemeFarMotif(graphics: Phaser.GameObjects.Graphics, theme: LevelTheme) {
+    const accent = this.hexColor(theme.accent);
+    const accent2 = this.hexColor(theme.accent2);
+    const far = this.hexColor(theme.far);
+
+    graphics.lineStyle(2, accent, 0.16);
+    for (let i = 0; i < 26; i += 1) {
+      const x = i * 170;
+      if (theme.id === 'storm_rig') {
+        graphics.lineBetween(x + 40, 72, x + 8, 152 + (i % 5) * 20);
+        graphics.lineBetween(x + 8, 152 + (i % 5) * 20, x + 68, 142 + (i % 4) * 28);
+      } else if (theme.id === 'void_tide') {
+        graphics.strokeCircle(x + 56, 118 + (i % 5) * 30, 22 + (i % 3) * 9);
+      } else {
+        graphics.lineBetween(x, 90 + (i % 6) * 33, x + 80, 70 + (i % 5) * 40);
+      }
+    }
+
+    if (theme.id === 'ember_forge') {
+      graphics.fillStyle(accent, 0.13);
+      for (let i = 0; i < 18; i += 1) graphics.fillRect(i * 240 + 28, 590, 38, 130);
+    }
+    if (theme.id === 'frost_lab') {
+      graphics.lineStyle(3, accent2, 0.18);
+      for (let i = 0; i < 22; i += 1) graphics.strokeTriangle(i * 190 + 20, 224, i * 190 + 72, 132, i * 190 + 124, 224);
+    }
+    if (theme.id === 'signal_metro') {
+      graphics.lineStyle(4, far, 0.72);
+      for (let i = 0; i < 12; i += 1) graphics.lineBetween(0, 190 + i * 36, 4300, 172 + i * 36);
+    }
+  }
+
+  private drawThemeMidMotif(graphics: Phaser.GameObjects.Graphics, theme: LevelTheme) {
+    const accent = this.hexColor(theme.accent);
+    const accent2 = this.hexColor(theme.accent2);
+    const mid = this.hexColor(theme.mid);
+    graphics.lineStyle(1, accent, 0.17);
+
     for (let i = 0; i < 34; i += 1) {
       const x = i * 138 + (i % 4) * 23;
-      mid.lineBetween(x, 130 + (i % 5) * 44, x, 190 + (i % 6) * 36);
+      if (theme.id === 'overgrown_ruins') {
+        graphics.lineBetween(x, 120, x + (i % 2 === 0 ? 28 : -22), 260 + (i % 5) * 32);
+        graphics.fillStyle(accent, 0.12);
+        graphics.fillCircle(x + 8, 248 + (i % 5) * 24, 12 + (i % 3) * 4);
+      } else if (theme.id === 'crystal_cave') {
+        graphics.lineStyle(2, accent2, 0.22);
+        graphics.strokeTriangle(x, 310, x + 38, 210 + (i % 4) * 28, x + 76, 310);
+      } else if (theme.id === 'solar_ruins') {
+        graphics.lineStyle(2, accent, 0.16);
+        graphics.strokeRect(x, 230 + (i % 5) * 22, 62, 96);
+      } else {
+        graphics.lineBetween(x, 130 + (i % 5) * 44, x, 190 + (i % 6) * 36);
+      }
     }
-    mid.lineStyle(3, 0xd46cff, 0.12);
+
+    graphics.lineStyle(3, accent2, 0.12);
     for (let i = 0; i < 18; i += 1) {
       const x = 90 + i * 238;
-      mid.lineBetween(x, 250 + (i % 3) * 38, x + 64, 252 + (i % 4) * 42);
+      if (theme.id === 'frost_lab') {
+        graphics.lineBetween(x, 260, x + 42, 318);
+        graphics.lineBetween(x + 42, 318, x + 80, 256);
+      } else if (theme.id === 'ember_forge') {
+        graphics.fillStyle(mid, 0.58);
+        graphics.fillRoundedRect(x, 268, 88, 26 + (i % 3) * 12, 8);
+      } else {
+        graphics.lineBetween(x, 250 + (i % 3) * 38, x + 64, 252 + (i % 4) * 42);
+      }
     }
-    mid.setScrollFactor(0.42, 0.28);
+  }
+
+  private hexColor(color: string) {
+    return Number.parseInt(color.replace('#', ''), 16);
   }
 
   private createWorldEffects() {
@@ -567,6 +651,7 @@ export class GameScene extends Phaser.Scene {
   private applyEntityPresentation(runtime: RuntimeEntity) {
     const { sprite, schema } = runtime;
     sprite.setDepth(this.depthForEntity(schema.base_type));
+    this.applyEntityThemeTint(runtime);
 
     if (schema.base_type === 'collectible') {
       sprite.play(schema.render_layer === 'visual_corrupt_coin' ? 'coin-corrupt' : 'coin-spin', true);
@@ -590,6 +675,48 @@ export class GameScene extends Phaser.Scene {
           yoyo: true
         });
       }
+    }
+  }
+
+  private applyEntityThemeTint(runtime: RuntimeEntity) {
+    const tint = this.themeTintForLayer(runtime.schema.render_layer);
+    if (typeof tint !== 'number') {
+      runtime.sprite.clearTint();
+      return;
+    }
+
+    if (this.usesThemeFillTint(runtime.schema.render_layer)) runtime.sprite.setTintFill(tint);
+    else runtime.sprite.setTint(tint);
+  }
+
+  private usesThemeFillTint(layer: EntitySchema['render_layer']) {
+    return layer === 'visual_grass_block'
+      || layer === 'visual_neon_block'
+      || layer === 'visual_shadow_block'
+      || layer === 'visual_glitch_block'
+      || layer === 'visual_warning_block';
+  }
+
+  private themeTintForLayer(layer: EntitySchema['render_layer']) {
+    const theme = this.level.theme;
+    switch (layer) {
+      case 'visual_grass_block':
+      case 'visual_neon_block':
+        return this.hexColor(theme.groundTint);
+      case 'visual_shadow_block':
+        return this.hexColor(theme.shadowTint);
+      case 'visual_glitch_block':
+        return this.hexColor(theme.accent2);
+      case 'visual_warning_block':
+      case 'visual_spike':
+      case 'visual_corrupt_coin':
+        return this.hexColor(theme.danger);
+      case 'visual_portal':
+      case 'visual_checkpoint':
+      case 'visual_weapon_cache':
+        return this.hexColor(theme.accent);
+      default:
+        return null;
     }
   }
 
@@ -841,6 +968,7 @@ export class GameScene extends Phaser.Scene {
         runtime.sprite.play(state.render_layer === 'visual_corrupt_coin' ? 'coin-corrupt' : 'coin-spin', true);
       }
     }
+    this.applyEntityThemeTint(runtime);
 
     if (typeof state.alpha === 'number') runtime.sprite.setAlpha(state.alpha);
     else if (runtime.schema.render_layer !== 'transparent') runtime.sprite.setAlpha(1);
@@ -1062,8 +1190,19 @@ export class GameScene extends Phaser.Scene {
     const batch = this.telemetry.drainIfReady(time);
     if (!batch) return;
 
+    const previousProfile = this.currentDecision.profile;
     const decision = this.director.ingest(batch, this.level);
-    this.currentDecision = decision;
+    const planLine = `AI read: ${decision.profile}; arming ${decision.mutationBias.slice(0, 2).map((action) => action.replaceAll('_', ' ')).join(' + ')}`;
+    const shouldSurfacePlan = previousProfile !== decision.profile || time - this.lastAiPlanNoticeAt > 2200;
+    this.currentDecision = {
+      ...decision,
+      notice: shouldSurfacePlan ? planLine : decision.notice,
+      logEntries: [planLine, ...decision.logEntries].slice(0, 8)
+    };
+    if (shouldSurfacePlan) {
+      this.lastAiPlanNoticeAt = time;
+      this.spawnFloatText(`AI: ${decision.profile}`, this.player.x, this.player.y - 72, this.level.theme.accent);
+    }
     this.profileDecisionReady = true;
     this.level.global_environment = decision.environment;
     this.level.input_hijack = decision.inputHijack;
@@ -1160,6 +1299,7 @@ export class GameScene extends Phaser.Scene {
     this.weaponCharges = 0;
     this.routeStartedAt = this.time.now;
     this.profileDecisionReady = false;
+    this.lastAiPlanNoticeAt = -Infinity;
     this.adaptationLog = [];
     this.telemetry.reset(this.time.now);
     this.stationaryMs = 0;
@@ -1724,6 +1864,8 @@ export class GameScene extends Phaser.Scene {
         runComplete: this.runComplete,
         totalCoins: this.totalCoins
       },
+      routeArchetype: this.level.route_archetype.id,
+      theme: this.level.theme.id,
       profile: this.currentDecision.profile,
       entities
     };

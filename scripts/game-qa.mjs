@@ -42,16 +42,17 @@ try {
   const desktop = await runDesktopQa(browser);
   const level99 = await runLevel99Qa(browser);
   const advanced = await runAdvancedFeatureQa(browser);
+  const themeVariety = await runThemeVarietyQa(browser);
   const mobileLandscape = await runMobileLandscapeQa(browser);
   const mobilePortrait = await runMobilePortraitQa(browser);
 
   await browser.close();
 
   if (failures.length) {
-    console.error(JSON.stringify({ failures, desktop, level99, advanced, mobileLandscape, mobilePortrait, outDir }, null, 2));
+    console.error(JSON.stringify({ failures, desktop, level99, advanced, themeVariety, mobileLandscape, mobilePortrait, outDir }, null, 2));
     process.exitCode = 1;
   } else {
-    console.log(JSON.stringify({ desktop, level99, advanced, mobileLandscape, mobilePortrait, outDir }, null, 2));
+    console.log(JSON.stringify({ desktop, level99, advanced, themeVariety, mobileLandscape, mobilePortrait, outDir }, null, 2));
   }
 } finally {
   stopServer();
@@ -92,10 +93,11 @@ async function runDesktopQa(browser) {
     coins: document.querySelector('#hud-coins')?.textContent,
     score: document.querySelector('#hud-score')?.textContent,
     mutationFeedHidden: getComputedStyle(document.querySelector('#mutation-feed')).display === 'none',
+    mutationFeedEntries: [...document.querySelectorAll('#mutation-feed .mutation-feed__item')].map((node) => node.textContent),
     tutorialSkipVisible: !document.querySelector('#tutorial-skip-button')?.hasAttribute('hidden'),
     canvas: document.querySelector('canvas')?.getBoundingClientRect().toJSON()
   }));
-  assert('desktop live HUD is lean and exposes only player-facing run info', started.mode === 'Level 1' && started.ai && started.time && started.coins === '0/5' && Number(started.score?.replaceAll(',', '')) > 0 && started.mutationFeedHidden, started);
+  assert('desktop live HUD is lean and shows the AI readout compactly', started.mode === 'Level 1' && started.ai && started.time && started.coins === '0/5' && Number(started.score?.replaceAll(',', '')) > 0 && !started.mutationFeedHidden && started.mutationFeedEntries.some((entry) => entry?.includes('AI online') || entry?.includes('AI read') || entry?.startsWith('Zone:')), started);
   assert('desktop canvas is full gameplay size', started.canvas.width > 1000 && started.canvas.height > 560, started.canvas);
   assert('desktop tutorial starts with a visible skip control', started.tutorialSkipVisible, started);
 
@@ -387,6 +389,57 @@ async function runAdvancedFeatureQa(browser) {
     },
     weaponChargesAfterShot: shot.snapshot?.weaponCharges
   };
+}
+
+async function runThemeVarietyQa(browser) {
+  const levels = [2, 3, 4, 5, 6, 7, 8, 14];
+  const records = [];
+
+  for (const levelIndex of levels) {
+    const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+    watchPage(page, `theme-level-${levelIndex}`);
+    await page.addInitScript((selectedLevel) => {
+      window.localStorage.setItem('unxpected.meta.v1', JSON.stringify({
+        campaign: {
+          highestUnlockedLevel: 99,
+          selectedLevel
+        },
+        playerName: 'Theme QA',
+        leaderboard: [],
+        xp: 0
+      }));
+      window.localStorage.setItem('unxpected:tutorial-complete', '1');
+    }, levelIndex);
+    await page.goto(`${baseUrl}/?debugPhysics=1`, { waitUntil: 'networkidle' });
+    await page.click('#start-button');
+    await page.waitForFunction(() => Boolean(window.__PARADOX_DEBUG__?.snapshot));
+    await page.waitForTimeout(220);
+    const record = await page.evaluate(() => {
+      const snapshot = window.__PARADOX_DEBUG__.snapshot();
+      return {
+        hudMode: document.querySelector('#hud-mode')?.textContent,
+        routeArchetype: snapshot.routeArchetype,
+        theme: snapshot.theme,
+        hasHunterRoute: Boolean(snapshot.entities.route_hunter_shadow_01),
+        hasSkyRoute: Boolean(snapshot.entities.route_sky_ladder_01),
+        hasTunnelRoute: Boolean(snapshot.entities.route_tunnel_ceiling_01),
+        hasVerticalRoute: Boolean(snapshot.entities.route_vertical_gate_01)
+      };
+    });
+    records.push({ levelIndex, ...record });
+    if ([2, 4, 6, 8, 14].includes(levelIndex)) {
+      await page.screenshot({ path: path.join(outDir, `desktop-theme-level-${levelIndex}.png`) });
+    }
+    await page.close();
+  }
+
+  const themeCount = new Set(records.map((record) => record.theme)).size;
+  const routeCount = new Set(records.map((record) => record.routeArchetype)).size;
+  const level14 = records.find((record) => record.levelIndex === 14);
+  assert('early campaign levels rotate visible themes and route archetypes', themeCount >= 6 && routeCount >= 6, { themeCount, routeCount, records });
+  assert('level 14 includes hunter-lane pressure instead of another plain route', level14?.routeArchetype === 'hunter_lane' && level14.hasHunterRoute, level14);
+
+  return { themeCount, routeCount, records };
 }
 
 async function runMobileLandscapeQa(browser) {

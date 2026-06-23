@@ -29,6 +29,19 @@ describe('campaign level factory', () => {
     expect(level.entities.some((entity) => entity.collision_mask === 'checkpoint')).toBe(false);
   });
 
+  it('changes theme and route identity across early campaign levels', () => {
+    const earlyLevels = Array.from({ length: 14 }, (_, index) => createOpeningLevel('standard', 0.85, undefined, index + 1));
+    const themes = new Set(earlyLevels.map((level) => level.theme.id));
+    const routes = new Set(earlyLevels.map((level) => level.route_archetype.id));
+    const level14 = earlyLevels[13];
+    const level14Ids = level14.entities.map((entity) => entity.entity_id);
+
+    expect(themes.size).toBeGreaterThanOrEqual(9);
+    expect(routes.size).toBeGreaterThanOrEqual(7);
+    expect(level14.route_archetype.id).toBe('hunter_lane');
+    expect(level14Ids).toContain('route_hunter_shadow_01');
+  });
+
   it('adds higher-level route variants without making the main path impossible', () => {
     const level = createOpeningLevel('standard', 1, undefined, 72);
     const ids = level.entities.map((entity) => entity.entity_id);

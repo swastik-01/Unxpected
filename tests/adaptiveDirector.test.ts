@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { AdaptiveDirector } from '../src/game/simulation/adaptiveDirector';
 import type { DynamicLevelSchema, TelemetryBatch } from '../src/game/types';
+import { levelThemes, routeArchetypes } from '../src/game/content/levelThemes';
 
 const level: DynamicLevelSchema = {
   session_id: 'test',
   tick_sequence: 0,
+  theme: levelThemes[0],
+  route_archetype: routeArchetypes[0],
   global_environment: {
     gravity_vector: { x: 0, y: 980 },
     friction_multiplier: 1,

@@ -68,12 +68,16 @@ describe('campaign level integrity', () => {
 
   it('increases campaign pressure with advanced hazards while keeping each level schema unique', () => {
     const fingerprints = new Set<string>();
+    const themes = new Set<string>();
+    const routeArchetypes = new Set<string>();
     let previousComplexity = 0;
 
     for (let levelIndex = 1; levelIndex <= maxCampaignLevel; levelIndex += 1) {
       const level = createDeterministicLevel(levelIndex);
       const actions = new Set(level.entities.map((entity) => entity.mutation_event?.action).filter(Boolean));
       const complexity = calculateComplexity(level);
+      themes.add(level.theme.id);
+      routeArchetypes.add(level.route_archetype.id);
 
       for (const expectation of expectedActionsByLevel) {
         if (levelIndex >= expectation.from) {
@@ -90,6 +94,8 @@ describe('campaign level integrity', () => {
     }
 
     expect(fingerprints.size).toBe(maxCampaignLevel);
+    expect(themes.size).toBeGreaterThanOrEqual(9);
+    expect(routeArchetypes.size).toBeGreaterThanOrEqual(7);
   });
 });
 
@@ -180,7 +186,10 @@ function calculateComplexity(level: DynamicLevelSchema) {
 }
 
 function fingerprintLevel(level: DynamicLevelSchema) {
-  return level.entities
+  return [
+    level.theme.id,
+    level.route_archetype.id,
+    ...level.entities
     .map((entity) => [
       entity.entity_id,
       entity.base_type,
@@ -196,7 +205,7 @@ function fingerprintLevel(level: DynamicLevelSchema) {
       entity.mutation_event?.mutated_state.velocity?.x ?? 'none',
       entity.mutation_event?.mutated_state.velocity?.y ?? 'none'
     ].join(':'))
-    .join('|');
+  ].join('|');
 }
 
 function levelLabel(levelIndex: number, entity: EntitySchema) {

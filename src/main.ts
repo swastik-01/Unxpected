@@ -252,8 +252,16 @@ function renderHud(snapshot: HudSnapshot) {
   dashButton.classList.toggle('mobile-controls__action--ready', dashReady);
   dashButton.setAttribute('aria-label', dashReady ? 'Dash ready' : 'Dash recharging');
   notice.textContent = snapshot.notice;
-  feed.replaceChildren();
-  feed.classList.add('mutation-feed--hidden');
+  const visibleMutations = snapshot.mutations
+    .filter((entry) => entry && entry !== 'Observer online')
+    .slice(0, 3);
+  feed.replaceChildren(...visibleMutations.map((entry) => {
+    const item = document.createElement('span');
+    item.className = 'mutation-feed__item';
+    item.textContent = entry;
+    return item;
+  }));
+  feed.classList.toggle('mutation-feed--hidden', visibleMutations.length === 0);
 }
 
 function renderTutorial(snapshot: TutorialSnapshot) {

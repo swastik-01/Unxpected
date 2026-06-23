@@ -4,6 +4,46 @@ export type SkinId = 'neon' | 'signal' | 'void' | 'paradox';
 export type TrailId = 'ion' | 'data' | 'warning' | 'paradox';
 export type DeathEffectId = 'glitch' | 'fracture' | 'static' | 'nova';
 export type PortalEffectId = 'clean' | 'daily' | 'singularity' | 'paradox';
+export type LevelThemeId =
+  | 'neon_city'
+  | 'overgrown_ruins'
+  | 'ember_forge'
+  | 'frost_lab'
+  | 'solar_ruins'
+  | 'void_tide'
+  | 'signal_metro'
+  | 'crystal_cave'
+  | 'storm_rig';
+export type RouteArchetypeId =
+  | 'core_run'
+  | 'sky_ladder'
+  | 'tunnel_cut'
+  | 'collapse_bridge'
+  | 'crossfire_gap'
+  | 'hunter_lane'
+  | 'vertical_gate';
+
+export interface LevelTheme {
+  accent: string;
+  accent2: string;
+  danger: string;
+  far: string;
+  foreground: string;
+  groundTint: string;
+  id: LevelThemeId;
+  label: string;
+  mid: string;
+  shadowTint: string;
+  shortLabel: string;
+  skyBottom: string;
+  skyTop: string;
+}
+
+export interface RouteArchetype {
+  id: RouteArchetypeId;
+  label: string;
+  signature: string;
+}
 
 export interface CosmeticLoadout {
   skin: SkinId;
@@ -140,6 +180,8 @@ export interface InputHijackState {
 export interface DynamicLevelSchema {
   session_id: string;
   tick_sequence: number;
+  theme: LevelTheme;
+  route_archetype: RouteArchetype;
   global_environment: {
     gravity_vector: Vector2;
     friction_multiplier: number;
