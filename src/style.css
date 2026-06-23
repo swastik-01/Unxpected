@@ -734,6 +734,10 @@ label {
   gap: 0.55rem;
 }
 
+.mobile-controls button[data-action="down"] {
+  min-width: 72px;
+}
+
 .system-spoof {
   position: absolute;
   left: 50%;
@@ -1035,6 +1039,10 @@ label {
     min-width: 52px;
     min-height: 42px;
     padding: 0.3rem 0.46rem;
+  }
+
+  .mobile-controls button[data-action="down"] {
+    min-width: 56px;
   }
 
   .mobile-controls__move {

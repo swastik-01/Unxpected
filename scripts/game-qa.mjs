@@ -41,16 +41,17 @@ try {
 
   const desktop = await runDesktopQa(browser);
   const level99 = await runLevel99Qa(browser);
+  const advanced = await runAdvancedFeatureQa(browser);
   const mobileLandscape = await runMobileLandscapeQa(browser);
   const mobilePortrait = await runMobilePortraitQa(browser);
 
   await browser.close();
 
   if (failures.length) {
-    console.error(JSON.stringify({ failures, desktop, level99, mobileLandscape, mobilePortrait, outDir }, null, 2));
+    console.error(JSON.stringify({ failures, desktop, level99, advanced, mobileLandscape, mobilePortrait, outDir }, null, 2));
     process.exitCode = 1;
   } else {
-    console.log(JSON.stringify({ desktop, level99, mobileLandscape, mobilePortrait, outDir }, null, 2));
+    console.log(JSON.stringify({ desktop, level99, advanced, mobileLandscape, mobilePortrait, outDir }, null, 2));
   }
 } finally {
   stopServer();
@@ -66,7 +67,7 @@ async function runDesktopQa(browser) {
   assert('desktop menu boots as a compact player-facing launch panel', menu.dailyButton === 'Daily Anomaly' && !menu.trainingVisible && !menu.aggressionVisible && menu.aggression === '100%' && menu.campaignProgress === 'Unlocked 1/99' && menu.playerName === 'Runner' && menu.globalStatus && menu.startButton === 'Start Level 1', menu);
   assert('desktop menu has no horizontal overflow or internal scrolling', !menu.overflowX && !menu.panelScrollable, menu);
   assert('desktop menu keeps controls hidden', menu.mobileControlsHidden, menu);
-  await page.screenshot({ path: path.join(outDir, 'desktop-menu.png'), fullPage: true });
+  await page.screenshot({ path: path.join(outDir, 'desktop-menu.png') });
 
   await page.click('#start-button');
   await page.waitForFunction(() => Boolean(window.__PARADOX_DEBUG__?.snapshot));
@@ -119,7 +120,7 @@ async function runDesktopQa(browser) {
   assert('desktop dash uses the stretched dash pose', dash.animation === 'player-dash' && dash.textureKey === 'player_dash', dash);
   const dashText = await page.locator('#dash-meter-fill').evaluate((node) => getComputedStyle(node).transform);
   assert('desktop dash meter reacts after dash', dashText !== 'none', { dashText });
-  await page.screenshot({ path: path.join(outDir, 'desktop-gameplay.png'), fullPage: true });
+  await page.screenshot({ path: path.join(outDir, 'desktop-gameplay.png') });
   await page.waitForTimeout(260);
 
   await page.waitForFunction(() => window.__PARADOX_DEBUG__.snapshot().player.onGround, null, { timeout: 1500 });
@@ -202,7 +203,7 @@ async function runDesktopQa(browser) {
   }));
   assert('desktop completion summary is compact and drives the next level', summary.title === 'Level 1 Clear' && summary.nextButton === 'Next Level 2' && summary.progression.some((line) => line?.includes('Level 2 unlocked')) && !summary.secondaryVisible, summary);
   assert('desktop meta progression persisted', summary.stored.xp > 0 && summary.stored.leaderboard.length >= 1, summary.stored);
-  await page.screenshot({ path: path.join(outDir, 'desktop-summary.png'), fullPage: true });
+  await page.screenshot({ path: path.join(outDir, 'desktop-summary.png') });
 
   await page.close();
   return { menu, started, pause, summary: { grade: summary.grade, progression: summary.progression.length } };
@@ -271,7 +272,7 @@ async function runLevel99Qa(browser) {
       .map((id) => [id, entities[id]]));
   });
   assert('level 99 forced endgame hazards become active lethal physics objects', Object.values(mutated).every((entity) => entity.mask === 'lethal_hazard' && entity.bodyEnabled), mutated);
-  await page.screenshot({ path: path.join(outDir, 'desktop-level-99-endgame.png'), fullPage: true });
+  await page.screenshot({ path: path.join(outDir, 'desktop-level-99-endgame.png') });
 
   await page.evaluate(() => window.__PARADOX_DEBUG__.killPlayer('QA level 99 reset'));
   const resetPoll = await waitForDebugSnapshot(page, (snapshot) => (
@@ -300,6 +301,92 @@ async function runLevel99Qa(browser) {
   assert('level 99 death reset restores endgame hazards to original state', reset.mutationsSurvived === 0 && reset.inertRestored && reset.pressureSpikeRestored, reset);
   await page.close();
   return { menu, boot, mutatedCount: Object.keys(mutated).length, reset: { player: reset.player, mutationsSurvived: reset.mutationsSurvived } };
+}
+
+async function runAdvancedFeatureQa(browser) {
+  const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+  watchPage(page, 'advanced-features');
+  await page.addInitScript(() => {
+    window.localStorage.setItem('unxpected.meta.v1', JSON.stringify({
+      campaign: {
+        highestUnlockedLevel: 72,
+        selectedLevel: 72
+      },
+      playerName: 'QA Runner',
+      leaderboard: [],
+      xp: 0
+    }));
+    window.localStorage.setItem('unxpected:tutorial-complete', '1');
+  });
+  await page.goto(`${baseUrl}/?debugPhysics=1`, { waitUntil: 'networkidle' });
+  await page.click('#start-button');
+  await page.waitForFunction(() => Boolean(window.__PARADOX_DEBUG__?.snapshot));
+  await page.waitForTimeout(450);
+
+  const boot = await page.evaluate(() => {
+    const snapshot = window.__PARADOX_DEBUG__.snapshot();
+    const requiredIds = [
+      'air_ladder_step_01',
+      'bottom_shot_01',
+      'bottom_shot_02',
+      'tunnel_ceiling_01',
+      'weapon_cache_01',
+      'armed_monster_01',
+      'final_collapse_01',
+      'goal_lip_01'
+    ];
+    return {
+      hudMode: document.querySelector('#hud-mode')?.textContent,
+      missing: requiredIds.filter((id) => !snapshot.entities[id]),
+      weaponCharges: snapshot.weaponCharges
+    };
+  });
+  assert('advanced level boots with high-level route systems', boot.hudMode === 'Level 72' && boot.missing.length === 0 && boot.weaponCharges === 0, boot);
+
+  await page.evaluate(() => {
+    window.__PARADOX_DEBUG__.forceMutation('bottom_shot_01');
+    window.__PARADOX_DEBUG__.forceMutation('final_collapse_01');
+  });
+  const forced = await page.evaluate(() => {
+    const entities = window.__PARADOX_DEBUG__.snapshot().entities;
+    return {
+      bottomShot: entities.bottom_shot_01,
+      finalTrap: entities.final_collapse_01
+    };
+  });
+  assert('advanced bottom turret fires upward and final trap can collapse', forced.bottomShot.mask === 'lethal_hazard' && forced.bottomShot.vy < -250 && forced.finalTrap.mask === 'pass_through', forced);
+
+  await page.evaluate(() => {
+    const cache = window.__PARADOX_DEBUG__.snapshot().entities.weapon_cache_01;
+    window.__PARADOX_DEBUG__.teleportPlayer(cache.x, cache.y);
+  });
+  const pickup = await waitForDebugSnapshot(page, (snapshot) => snapshot.weaponCharges >= 3, { timeout: 2500 });
+  assert('advanced weapon cache grants blaster charges', pickup.matched, pickup.snapshot);
+
+  await page.evaluate(() => {
+    window.__PARADOX_DEBUG__.forceMutation('armed_monster_01');
+    window.__PARADOX_DEBUG__.teleportPlayer(3608, 590);
+  });
+  await page.waitForFunction(() => window.__PARADOX_DEBUG__.snapshot().entities.armed_monster_01.mask === 'lethal_hazard', null, { timeout: 1500 });
+  await mappedKeyDown(page, 'KeyJ', 'j');
+  await page.waitForTimeout(80);
+  await mappedKeyUp(page, 'KeyJ', 'j');
+  const shot = await waitForDebugSnapshot(page, (snapshot) => (
+    snapshot.weaponCharges === 2
+      && snapshot.entities.armed_monster_01.mask === 'sensor'
+      && !snapshot.entities.armed_monster_01.visible
+  ), { timeout: 2500 });
+  assert('advanced blaster shot neutralizes hunter-type monsters', shot.matched, shot.snapshot);
+  await page.screenshot({ path: path.join(outDir, 'desktop-advanced-features.png') });
+  await page.close();
+  return {
+    boot,
+    forced: {
+      bottomVy: forced.bottomShot.vy,
+      finalTrapMask: forced.finalTrap.mask
+    },
+    weaponChargesAfterShot: shot.snapshot?.weaponCharges
+  };
 }
 
 async function runMobileLandscapeQa(browser) {
@@ -354,7 +441,7 @@ async function runMobileLandscapeQa(browser) {
     }, 980);
   }));
   assert('mobile landscape sustained right hold survives long-press contextmenu', sustainedRight.afterContext.x > sustainedRight.before + 24 && sustainedRight.afterContext.vx > 150, sustainedRight);
-  await page.screenshot({ path: path.join(outDir, 'mobile-landscape-gameplay.png'), fullPage: true });
+  await page.screenshot({ path: path.join(outDir, 'mobile-landscape-gameplay.png') });
 
   await page.evaluate(() => window.__PARADOX_DEBUG__.completeRun());
   await page.waitForSelector('#run-summary:not(.run-summary--hidden)');
@@ -369,7 +456,7 @@ async function runMobileLandscapeQa(browser) {
   }));
   assert('mobile landscape completion shows only the next-level screen and avoids overflow', summary.title === 'Level 1 Clear' && summary.nextButton === 'Next Level 2' && !summary.secondaryVisible && !summary.controlsVisible && !summary.overflowX, summary);
   assert('mobile landscape standard clear unlocks exactly the next campaign level', summary.stored.campaign.highestUnlockedLevel === 2 && summary.stored.campaign.selectedLevel === 2 && summary.progression.some((line) => line?.includes('Level 2 unlocked')), summary);
-  await page.screenshot({ path: path.join(outDir, 'mobile-landscape-summary.png'), fullPage: true });
+  await page.screenshot({ path: path.join(outDir, 'mobile-landscape-summary.png') });
   await page.close();
   return { menu, gameplay, summary };
 }
@@ -391,7 +478,7 @@ async function runMobilePortraitQa(browser) {
     overflowX: document.documentElement.scrollWidth > window.innerWidth
   }));
   assert('mobile portrait play asks for rotation without showing gameplay controls behind the overlay', portrait.rotateVisible && !portrait.controlsVisible && !portrait.tutorialVisible && portrait.hudOpacity < 0.35 && !portrait.overflowX, portrait);
-  await page.screenshot({ path: path.join(outDir, 'mobile-portrait-rotate.png'), fullPage: true });
+  await page.screenshot({ path: path.join(outDir, 'mobile-portrait-rotate.png') });
   await page.close();
   return { menu, portrait };
 }

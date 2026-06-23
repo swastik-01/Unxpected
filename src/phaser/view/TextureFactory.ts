@@ -11,6 +11,7 @@ export function createGeneratedTextures(scene: Phaser.Scene) {
   makeBlock(scene, 'visual_glitch_block', 0x251f52, 0xd46cff);
   makeCoinFrames(scene, 'visual_gold_coin', 0xffd166, 0xff8f3d, false);
   makeCoinFrames(scene, 'visual_corrupt_coin', 0xff4f6d, 0x45d7ff, true);
+  makeWeaponCache(scene);
   makeProjectile(scene);
   makeRock(scene);
   makeHunter(scene);
@@ -102,6 +103,24 @@ function makeProjectile(scene: Phaser.Scene) {
     graphics.strokeRoundedRect(8, 37, 70, 22, 11);
     graphics.lineStyle(3, 0x45d7ff, 0.72);
     graphics.lineBetween(3, 48, 18, 48);
+  });
+}
+
+function makeWeaponCache(scene: Phaser.Scene) {
+  withGraphics(scene, 'visual_weapon_cache', (graphics) => {
+    graphics.fillStyle(0x0b1020, 0.96);
+    graphics.fillRoundedRect(14, 26, 68, 44, 10);
+    graphics.fillStyle(0x23334f, 1);
+    graphics.fillRoundedRect(18, 30, 60, 36, 8);
+    graphics.lineStyle(5, 0x45d7ff, 0.86);
+    graphics.strokeRoundedRect(18, 30, 60, 36, 8);
+    graphics.fillStyle(0x58f0a7, 0.95);
+    graphics.fillRoundedRect(31, 43, 34, 9, 4);
+    graphics.fillStyle(0xffd166, 0.92);
+    graphics.fillTriangle(68, 35, 84, 48, 68, 61);
+    graphics.lineStyle(3, 0xffffff, 0.35);
+    graphics.lineBetween(26, 36, 58, 36);
+    graphics.lineBetween(26, 60, 52, 60);
   });
 }
 

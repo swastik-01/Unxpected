@@ -70,6 +70,7 @@ interface PhysicsDebugSnapshot {
   };
   deaths: number;
   coins: number;
+  weaponCharges: number;
   actions: ActionState;
   checkpointIndex: number;
   checkpoint: {
@@ -217,6 +218,7 @@ export class GameScene extends Phaser.Scene {
   private dynamicSolidGroup!: Phaser.Physics.Arcade.Group;
   private hazardGroup!: Phaser.Physics.Arcade.Group;
   private collectibleGroup!: Phaser.Physics.Arcade.Group;
+  private playerShotGroup!: Phaser.Physics.Arcade.Group;
   private checkpointGroup!: Phaser.Physics.Arcade.Group;
   private goalGroup!: Phaser.Physics.Arcade.Group;
   private actions: ActionState = { left: false, right: false, jump: false, dash: false, down: false };
@@ -239,8 +241,10 @@ export class GameScene extends Phaser.Scene {
   private lastActionTimeMs = 0;
   private dashReadyAt = 0;
   private lastDashDeniedAt = -Infinity;
+  private lastShotAt = -Infinity;
   private dashVisualUntil = 0;
   private dashUsedThisRun = false;
+  private weaponCharges = 0;
   private jumpBufferedUntil = 0;
   private jumpCutAvailable = false;
   private jumpUsedThisRun = false;
@@ -275,6 +279,8 @@ export class GameScene extends Phaser.Scene {
     this.director = new AdaptiveDirector(this.sceneConfig.aggression);
     this.adaptationLog = [];
     this.mutationsSurvived = 0;
+    this.weaponCharges = 0;
+    this.lastShotAt = -Infinity;
     this.runStartedAt = this.time.now;
     this.routeStartedAt = this.runStartedAt;
     this.profileDecisionReady = false;
@@ -294,6 +300,7 @@ export class GameScene extends Phaser.Scene {
     this.dynamicSolidGroup = this.physics.add.group({ allowGravity: false, immovable: true });
     this.hazardGroup = this.physics.add.group({ allowGravity: false, immovable: true });
     this.collectibleGroup = this.physics.add.group({ allowGravity: false, immovable: true });
+    this.playerShotGroup = this.physics.add.group({ allowGravity: false, immovable: false });
     this.checkpointGroup = this.physics.add.group({ allowGravity: false, immovable: true });
     this.goalGroup = this.physics.add.group({ allowGravity: false, immovable: true });
 
@@ -456,11 +463,22 @@ export class GameScene extends Phaser.Scene {
       if (!entity || entity.schema.collision_mask !== 'trigger_pickup') return;
       this.coins += 1;
       this.spawnPickupBurst(sprite.x, sprite.y);
-      this.spawnFloatText('+1', sprite.x, sprite.y - 28, '#ffd166');
-      this.audio.play('coin');
+      if (entity.schema.behavior === 'weapon_pickup') {
+        this.weaponCharges = Math.max(this.weaponCharges, 3);
+        this.currentDecision.notice = 'Blaster charged: shoot hunters with the Shoot button.';
+        this.spawnFloatText('Blaster +3', sprite.x, sprite.y - 30, '#45d7ff');
+        this.audio.play('mutation');
+        this.emitHud(this.currentDecision.notice);
+      } else {
+        this.spawnFloatText('+1', sprite.x, sprite.y - 28, '#ffd166');
+        this.audio.play('coin');
+      }
       sprite.disableBody(true, true);
       entity.schema.collision_mask = 'sensor';
       this.flashCamera(0x58f0a7, 90);
+    });
+    this.physics.add.overlap(this.playerShotGroup, this.hazardGroup, (shotObject, hazardObject) => {
+      this.handlePlayerShotHit(shotObject as Phaser.Physics.Arcade.Sprite, hazardObject as Phaser.Physics.Arcade.Sprite);
     });
     this.physics.add.overlap(this.player, this.goalGroup, () => this.finishRun());
   }
@@ -516,7 +534,15 @@ export class GameScene extends Phaser.Scene {
     if (this.scanlineLayer && !this.reducedMotion) {
       this.scanlineLayer.tilePositionY += delta * 0.018;
     }
+    this.cleanupPlayerShots();
     this.updateAdaptiveHazards(delta);
+  }
+
+  private cleanupPlayerShots() {
+    for (const shot of this.playerShotGroup.getChildren()) {
+      const sprite = shot as Phaser.Physics.Arcade.Sprite;
+      if (sprite.x < -80 || sprite.x > 4380 || sprite.y < -80 || sprite.y > 900) sprite.destroy();
+    }
   }
 
   private updateAdaptiveHazards(delta: number) {
@@ -631,6 +657,74 @@ export class GameScene extends Phaser.Scene {
       this.spawnFloatText('Dash charging', this.player.x, this.player.y - 46, '#ffd166');
       this.flashCamera(0xffd166, 28);
     }
+
+    const shootPressed = this.sceneConfig.input.consumeDownPressed(this.actions);
+    if (shootPressed) {
+      if (this.weaponCharges > 0 && time - this.lastShotAt > 240) {
+        this.firePlayerShot();
+        this.weaponCharges -= 1;
+        this.lastShotAt = time;
+      } else if (this.sceneConfig.levelIndex >= 61 && time - this.lastShotAt > 360) {
+        this.lastShotAt = time;
+        this.spawnFloatText('No charge', this.player.x, this.player.y - 54, '#9ca8bd');
+      }
+    }
+  }
+
+  private firePlayerShot() {
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const direction = this.player.flipX || body.velocity.x < -30 ? -1 : 1;
+    const shot = this.physics.add.sprite(this.player.x + direction * 34, this.player.y - 4, 'visual_projectile');
+    shot.setDepth(14);
+    shot.setDisplaySize(58, 17);
+    shot.setFlipX(direction < 0);
+    shot.body?.setSize(58, 17, true);
+    shot.body?.setAllowGravity(false);
+    shot.setVelocity(direction * 720, 0);
+    shot.setData('player_shot', true);
+    this.playerShotGroup.add(shot, true);
+    this.time.delayedCall(90, () => this.neutralizeNearestHunter(direction));
+    this.spawnDashTrail(direction);
+    this.flashCamera(0x45d7ff, 42);
+    this.audio.play('dash');
+  }
+
+  private handlePlayerShotHit(shot: Phaser.Physics.Arcade.Sprite, target: Phaser.Physics.Arcade.Sprite) {
+    if (!shot.active) return;
+    const runtime = this.entities.get(target.getData('entity_id'));
+    shot.destroy();
+    if (!runtime || runtime.schema.render_layer !== 'visual_hunter') return;
+    this.neutralizeHunter(runtime);
+  }
+
+  private neutralizeNearestHunter(direction: number) {
+    const candidates = [...this.entities.values()]
+      .filter((runtime) => (
+        runtime.schema.render_layer === 'visual_hunter'
+        && runtime.schema.collision_mask === 'lethal_hazard'
+        && runtime.sprite.visible
+        && (runtime.sprite.x - this.player.x) * direction > 0
+        && Math.abs(runtime.sprite.y - this.player.y) < 105
+        && Math.abs(runtime.sprite.x - this.player.x) < 620
+      ))
+      .sort((a, b) => Math.abs(a.sprite.x - this.player.x) - Math.abs(b.sprite.x - this.player.x));
+
+    if (candidates[0]) this.neutralizeHunter(candidates[0]);
+  }
+
+  private neutralizeHunter(runtime: RuntimeEntity) {
+    this.removeFromGroups(runtime.sprite);
+    runtime.schema.collision_mask = 'sensor';
+    runtime.triggered = true;
+    runtime.telegraphTween?.remove();
+    runtime.telegraphTween = null;
+    runtime.sprite.disableBody(true, true);
+    this.spawnMutationBurst(runtime.sprite.x, runtime.sprite.y, true);
+    this.spawnFloatText('Neutralized', runtime.sprite.x, runtime.sprite.y - 48, '#58f0a7');
+    this.currentDecision.notice = 'Hunter neutralized.';
+    this.adaptationLog = ['Hunter neutralized by blaster', ...this.adaptationLog].slice(0, 6);
+    this.audio.play('coin');
+    this.emitHud(this.currentDecision.notice);
   }
 
   private trackStationary(delta: number) {
@@ -1063,12 +1157,14 @@ export class GameScene extends Phaser.Scene {
     this.coins = 0;
     this.totalCoins = this.level.entities.filter((entity) => entity.base_type === 'collectible').length;
     this.mutationsSurvived = 0;
+    this.weaponCharges = 0;
     this.routeStartedAt = this.time.now;
     this.profileDecisionReady = false;
     this.adaptationLog = [];
     this.telemetry.reset(this.time.now);
     this.stationaryMs = 0;
     this.actions = { left: false, right: false, jump: false, dash: false, down: false };
+    this.lastShotAt = -Infinity;
     this.sceneConfig.input.releaseAll();
     this.currentDecision.environment = this.level.global_environment;
     this.currentDecision.inputHijack = this.level.input_hijack;
@@ -1091,6 +1187,7 @@ export class GameScene extends Phaser.Scene {
     this.dynamicSolidGroup.clear(false, false);
     this.hazardGroup.clear(false, false);
     this.collectibleGroup.clear(false, false);
+    this.playerShotGroup.clear(true, true);
     this.checkpointGroup.clear(false, false);
     this.goalGroup.clear(false, false);
   }
@@ -1617,6 +1714,7 @@ export class GameScene extends Phaser.Scene {
       },
       deaths: this.deaths,
       coins: this.coins,
+      weaponCharges: this.weaponCharges,
       actions: { ...this.actions },
       checkpointIndex: this.checkpointIndex,
       checkpoint: { ...this.checkpoint },

@@ -12,7 +12,8 @@ const keyMap: Record<string, keyof ActionState> = {
   ShiftRight: 'dash',
   KeyK: 'dash',
   ArrowDown: 'down',
-  KeyS: 'down'
+  KeyS: 'down',
+  KeyJ: 'down'
 };
 
 const blankActions = (): ActionState => ({
@@ -29,6 +30,7 @@ export class InputController {
   private touchPointers = new Map<number, keyof ActionState>();
   private lastJump = false;
   private lastDash = false;
+  private lastDown = false;
 
   constructor(private readonly documentRef: Document) {
     this.bindKeyboard();
@@ -63,9 +65,16 @@ export class InputController {
     return pressed;
   }
 
+  consumeDownPressed(actions: ActionState) {
+    const pressed = actions.down && !this.lastDown;
+    this.lastDown = actions.down;
+    return pressed;
+  }
+
   resetEdges() {
     this.lastJump = false;
     this.lastDash = false;
+    this.lastDown = false;
   }
 
   releaseAll() {

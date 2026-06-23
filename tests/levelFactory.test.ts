@@ -25,7 +25,21 @@ describe('campaign level factory', () => {
     expect(ids).toContain('rebuild_floor_01');
     expect(ids).toContain('coin_high_variant');
     expect(ids).toContain('hunter_01');
+    expect(ids).toContain('air_ladder_step_01');
     expect(level.entities.some((entity) => entity.collision_mask === 'checkpoint')).toBe(false);
+  });
+
+  it('adds higher-level route variants without making the main path impossible', () => {
+    const level = createOpeningLevel('standard', 1, undefined, 72);
+    const ids = level.entities.map((entity) => entity.entity_id);
+
+    expect(ids).toContain('bottom_shot_01');
+    expect(ids).toContain('bottom_shot_02');
+    expect(ids).toContain('tunnel_ceiling_01');
+    expect(ids).toContain('weapon_cache_01');
+    expect(ids).toContain('armed_monster_01');
+    expect(ids).toContain('final_collapse_01');
+    expect(ids).toContain('goal_lip_01');
   });
 
   it('supports exactly 99 campaign levels without adding checkpoint shortcuts', () => {
@@ -37,6 +51,8 @@ describe('campaign level factory', () => {
     expect(ids).toContain('sky_strike_01');
     expect(ids).toContain('rolling_rock_01');
     expect(ids).toContain('spike_pressure_variant');
+    expect(ids).toContain('bottom_shot_02');
+    expect(ids).toContain('weapon_cache_01');
     expect(level.entities.some((entity) => entity.collision_mask === 'checkpoint')).toBe(false);
   });
 });

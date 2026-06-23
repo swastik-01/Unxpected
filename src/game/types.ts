@@ -54,6 +54,7 @@ export type RenderLayer =
   | 'visual_gold_coin'
   | 'visual_corrupt_coin'
   | 'visual_projectile'
+  | 'visual_weapon_cache'
   | 'visual_rock'
   | 'visual_hunter'
   | 'visual_spike'
@@ -119,7 +120,7 @@ export interface MutationEvent {
 export interface EntitySchema {
   entity_id: string;
   base_type: BaseEntityType;
-  behavior?: 'none' | 'rebuild_floor' | 'rolling_hazard' | 'sky_fall' | 'hunter_chase';
+  behavior?: 'none' | 'rebuild_floor' | 'rolling_hazard' | 'sky_fall' | 'hunter_chase' | 'weapon_pickup';
   transform: Transform;
   render_layer: RenderLayer;
   collision_mask: CollisionMask;

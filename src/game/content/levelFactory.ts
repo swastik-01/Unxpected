@@ -67,6 +67,16 @@ const coin = (entity_id: string, x: number, y: number, mutationMode: CoinMutatio
     : null
 });
 
+const weaponCache = (entity_id: string, x: number, y: number): EntitySchema => ({
+  entity_id,
+  base_type: 'collectible',
+  behavior: 'weapon_pickup',
+  transform: { x, y, width: 42, height: 34 },
+  render_layer: 'visual_weapon_cache',
+  collision_mask: 'trigger_pickup',
+  mutation_event: null
+});
+
 export function createOpeningLevel(mode: MenuMode, aggression: number, dailyAnomaly?: DailyAnomaly, levelIndex = 1): DynamicLevelSchema {
   const training = mode === 'training';
   const daily = mode === 'daily' ? dailyAnomaly : undefined;
@@ -198,7 +208,26 @@ export function createOpeningLevel(mode: MenuMode, aggression: number, dailyAnom
         }
       }
     }),
-    platform('ground_05', 3380, 650, 740, 70, { render_layer: 'visual_grass_block' }),
+    platform('ground_05', 3380, 650, 390, 70, { render_layer: 'visual_grass_block' }),
+    platform('final_collapse_01', 3810, 650, 130, 70, {
+      render_layer: 'visual_grass_block',
+      mutation_event: {
+        trigger_condition: 'player_distance_less_than',
+        condition_value: 155,
+        action: 'floor_collapse',
+        hint: 'Final floor trap armed near the gate',
+        once: true,
+        telegraph_ms: 680,
+        active_profiles: ['Balanced', 'Speedrunner', 'Methodical', 'Panicked', 'Safe-Zoner'],
+        mutated_state: {
+          render_layer: 'visual_glitch_block',
+          collision_mask: 'pass_through',
+          alpha: 0.26,
+          velocity: { x: 0, y: 360 }
+        }
+      }
+    }),
+    platform('goal_lip_01', 3970, 650, 150, 70, { render_layer: 'visual_grass_block' }),
     ...campaignVariants,
     coin('coin_00', 520, 560),
     coin('coin_01', 900, 560),
@@ -445,6 +474,52 @@ function createCampaignVariants(
     }));
   }
 
+  if (campaignLevel >= 22) {
+    variants.push(platform('air_ladder_step_01', 2180 + variant * 10, 555, 108, 26, {
+      render_layer: 'visual_neon_block'
+    }));
+    variants.push(platform('air_ladder_step_02', 2368 + variant * 8, 504, 104, 26, {
+      render_layer: 'visual_shadow_block'
+    }));
+    variants.push(platform('air_ladder_step_03', 2552 + variant * 6, 454, 112, 26, {
+      render_layer: 'visual_neon_block'
+    }));
+  }
+
+  if (campaignLevel >= 28) {
+    variants.push(hazard('bottom_shot_01', 2015 + variant * 22, 714, 18, 58, {
+      render_layer: 'transparent',
+      collision_mask: 'sensor',
+      mutation_event: {
+        trigger_condition: 'time_elapsed_ms',
+        condition_value: 5200 + variant * 180,
+        action: 'weapon_fire',
+        hint: 'AI fired a floor turret between platforms',
+        once: true,
+        telegraph_ms: Math.max(420, 660 - tier * 18),
+        active_profiles: ['Balanced', 'Speedrunner', 'Methodical', 'Panicked', 'Safe-Zoner'],
+        mutated_state: {
+          render_layer: 'visual_projectile',
+          collision_mask: 'lethal_hazard',
+          alpha: 1,
+          velocity: { x: 0, y: -(360 + tier * 36 + Math.round(trapScale * 80)) }
+        }
+      }
+    }));
+  }
+
+  if (campaignLevel >= 40) {
+    variants.push(platform('tunnel_ceiling_01', 3180 + variant * 10, 518, 160, 28, {
+      render_layer: 'visual_shadow_block'
+    }));
+    variants.push(platform('tunnel_ceiling_02', 3515 - variant * 8, 518, 190, 28, {
+      render_layer: 'visual_shadow_block'
+    }));
+    variants.push(platform('tunnel_lower_step_01', 3260 + variant * 8, 604, 134, 28, {
+      render_layer: 'visual_glitch_block'
+    }));
+  }
+
   if (tier >= 2) {
     variants.push(hazard('spike_pressure_variant', 3065 + (variant % 3) * 42, 574, 38, 76, {
       render_layer: 'visual_spike',
@@ -510,6 +585,30 @@ function createCampaignVariants(
     }));
   }
 
+  if (campaignLevel >= 61) {
+    variants.push(weaponCache('weapon_cache_01', 3425 - variant * 14, 560));
+    variants.push(hazard('armed_monster_01', 3725 - variant * 12, 590, 52, 66, {
+      behavior: 'hunter_chase',
+      render_layer: 'transparent',
+      collision_mask: 'sensor',
+      mutation_event: {
+        trigger_condition: 'player_distance_less_than',
+        condition_value: 760,
+        action: 'hunter_spawn',
+        hint: 'AI deployed an armed tunnel guard',
+        once: true,
+        telegraph_ms: Math.max(360, 620 - tier * 18),
+        active_profiles: ['Balanced', 'Speedrunner', 'Methodical', 'Safe-Zoner', 'Panicked'],
+        mutated_state: {
+          render_layer: 'visual_hunter',
+          collision_mask: 'lethal_hazard',
+          alpha: 1,
+          velocity: { x: -150 - tier * 24, y: 0 }
+        }
+      }
+    }));
+  }
+
   if (campaignLevel >= 65) {
     variants.push(hazard('rolling_rock_02', 2630 + variant * 18, 606, 58, 58, {
       behavior: 'rolling_hazard',
@@ -528,6 +627,28 @@ function createCampaignVariants(
           collision_mask: 'lethal_hazard',
           alpha: 1,
           velocity: { x: -(230 + variant * 22 + tier * 28), y: 0 }
+        }
+      }
+    }));
+  }
+
+  if (campaignLevel >= 72) {
+    variants.push(hazard('bottom_shot_02', 3120 - variant * 18, 714, 18, 58, {
+      render_layer: 'transparent',
+      collision_mask: 'sensor',
+      mutation_event: {
+        trigger_condition: 'time_elapsed_ms',
+        condition_value: 7600 + variant * 150,
+        action: 'weapon_fire',
+        hint: 'AI chained a second floor turret',
+        once: true,
+        telegraph_ms: Math.max(330, 560 - tier * 18),
+        active_profiles: ['Balanced', 'Speedrunner', 'Methodical', 'Panicked', 'Safe-Zoner'],
+        mutated_state: {
+          render_layer: 'visual_projectile',
+          collision_mask: 'lethal_hazard',
+          alpha: 1,
+          velocity: { x: variant % 2 === 0 ? -18 : 18, y: -(420 + tier * 44 + Math.round(trapScale * 90)) }
         }
       }
     }));

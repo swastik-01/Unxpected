@@ -19,7 +19,9 @@ const coreRoutePlatformIds = [
   'jump_wall_sensor',
   'ground_04',
   'route_drift_base_01',
-  'ground_05'
+  'ground_05',
+  'final_collapse_01',
+  'goal_lip_01'
 ] as const;
 const maxCoreRouteGapPx = 190;
 const maxCoreRouteRisePx = 125;
