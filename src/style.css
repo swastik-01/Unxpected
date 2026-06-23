@@ -398,7 +398,13 @@ label {
 }
 
 .menu__actions {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.menu__quick-actions {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
 }
 
 #start-button {
@@ -523,6 +529,48 @@ label {
 .run-summary__leaderboard li {
   color: var(--muted);
   line-height: 1.35;
+}
+
+.leaderboard-panel {
+  border-top-color: rgba(88, 240, 167, 0.28);
+}
+
+.leaderboard-panel--hidden {
+  display: none;
+}
+
+.leaderboard-panel__toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.leaderboard-panel__toolbar button,
+.menu__quick-actions button {
+  min-height: 38px;
+}
+
+.leaderboard-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.leaderboard-panel__grid article {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  min-width: 0;
+  border: 1px solid rgba(167, 209, 255, 0.16);
+  border-radius: 8px;
+  padding: 0.62rem;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.leaderboard-panel .local-leaderboard {
+  max-height: 8.5rem;
+  overflow: hidden;
+  font-size: 0.82rem;
 }
 
 .run-summary {
@@ -1113,16 +1161,36 @@ label {
     grid-row: 1 / span 2;
   }
 
+  .menu__quick-actions {
+    grid-column: 2;
+    gap: 0.45rem;
+  }
+
   .menu__section--pilot {
     grid-column: 1;
   }
 
   .menu__section[aria-label="Campaign levels"],
-  .menu__section[aria-label="Accessibility settings"] {
+  .menu__section[aria-label="Accessibility settings"],
+  .leaderboard-panel {
     grid-column: 2;
   }
 
+  .leaderboard-panel {
+    grid-row: span 3;
+  }
+
+  .leaderboard-panel__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.4rem;
+  }
+
+  .leaderboard-panel .local-leaderboard {
+    max-height: 4.6rem;
+  }
+
   .menu__actions,
+  .menu__quick-actions,
   .cosmetic-selectors,
   .settings-grid {
     gap: 0.45rem;

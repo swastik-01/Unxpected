@@ -47,6 +47,10 @@ const pauseMenu = requiredElement<HTMLElement>('#pause-menu');
 const startButton = requiredElement<HTMLButtonElement>('#start-button');
 const dailyButton = requiredElement<HTMLButtonElement>('#daily-button');
 const pauseButton = requiredElement<HTMLButtonElement>('#pause-button');
+const leaderboardButton = requiredElement<HTMLButtonElement>('#leaderboard-button');
+const leaderboardPanel = requiredElement<HTMLElement>('#leaderboard-panel');
+const leaderboardRefreshButton = requiredElement<HTMLButtonElement>('#leaderboard-refresh-button');
+const leaderboardCloseButton = requiredElement<HTMLButtonElement>('#leaderboard-close-button');
 const pauseTitle = requiredElement<HTMLElement>('#pause-title');
 const resumeButton = requiredElement<HTMLButtonElement>('#resume-button');
 const restartButton = requiredElement<HTMLButtonElement>('#restart-button');
@@ -388,12 +392,28 @@ function renderMenuProgression() {
   localLeaderboard.replaceChildren(...meta.leaderboard.slice(0, 5).map(renderLeaderboardEntry));
 }
 
+function showLeaderboardPanel() {
+  leaderboardPanel.classList.remove('leaderboard-panel--hidden');
+  void renderGlobalLeaderboard();
+}
+
+function hideLeaderboardPanel() {
+  leaderboardPanel.classList.add('leaderboard-panel--hidden');
+}
+
 async function renderGlobalLeaderboard() {
   const state = await fetchGlobalLeaderboard(5);
   globalLeaderboardStatus.textContent = state.configured ? state.status : 'Supabase off';
   globalLeaderboard.replaceChildren(
-    ...(state.entries.length ? state.entries : readMetaProgression().leaderboard.slice(0, 5)).map(renderLeaderboardEntry)
+    ...(state.entries.length
+      ? state.entries
+      : readMetaProgression().leaderboard.slice(0, 5)).map(renderLeaderboardEntry)
   );
+  if (!globalLeaderboard.children.length) {
+    const item = document.createElement('li');
+    item.textContent = state.configured ? 'No global users yet. Finish a level to post your run.' : 'Global leaderboard needs Supabase env vars on this build.';
+    globalLeaderboard.append(item);
+  }
   summaryGlobalStatus.textContent = state.status;
 }
 
@@ -486,6 +506,9 @@ playerName.addEventListener('blur', () => {
 
 startButton.addEventListener('click', () => startGame('standard'));
 dailyButton.addEventListener('click', () => startGame('daily'));
+leaderboardButton.addEventListener('click', showLeaderboardPanel);
+leaderboardRefreshButton.addEventListener('click', () => void renderGlobalLeaderboard());
+leaderboardCloseButton.addEventListener('click', hideLeaderboardPanel);
 pauseButton.addEventListener('click', pauseGame);
 resumeButton.addEventListener('click', resumeGame);
 restartButton.addEventListener('click', () => startGame(showingRunSummary ? nextMode : lastMode, showingRunSummary ? nextLevelIndex : lastLevelIndex));

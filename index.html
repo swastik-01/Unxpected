@@ -110,6 +110,9 @@
             </section>
             <div class="menu__actions">
               <button id="start-button" type="button">Start Run</button>
+            </div>
+            <div class="menu__quick-actions" aria-label="Secondary game options">
+              <button id="leaderboard-button" type="button">Leaderboard</button>
               <button id="daily-button" type="button">Daily Anomaly</button>
             </div>
             <section class="menu__section" aria-label="Campaign levels">
@@ -130,6 +133,32 @@
                 <span id="daily-streak">Streak 0</span>
               </div>
               <p id="daily-copy">A new seeded mutation route appears every day.</p>
+            </section>
+            <section id="leaderboard-panel" class="menu__section leaderboard-panel leaderboard-panel--hidden" aria-label="Leaderboard">
+              <div class="menu__section-head">
+                <strong>Leaderboard</strong>
+                <span id="global-leaderboard-status">Loading</span>
+              </div>
+              <div class="leaderboard-panel__toolbar">
+                <button id="leaderboard-refresh-button" type="button">Refresh</button>
+                <button id="leaderboard-close-button" type="button">Close</button>
+              </div>
+              <div class="leaderboard-panel__grid">
+                <article>
+                  <div class="menu__section-head">
+                    <strong>Global Users</strong>
+                    <span>Supabase</span>
+                  </div>
+                  <ol id="global-leaderboard" class="local-leaderboard"></ol>
+                </article>
+                <article>
+                  <div class="menu__section-head">
+                    <strong>Local Runs</strong>
+                    <span id="leaderboard-status">This device</span>
+                  </div>
+                  <ol id="local-leaderboard" class="local-leaderboard"></ol>
+                </article>
+              </div>
             </section>
             <section class="menu__section menu__advanced" aria-label="Progression" hidden>
               <div class="menu__section-head">
@@ -154,20 +183,6 @@
                 <label hidden><input id="color-safe-toggle" type="checkbox" /> Color-safe warnings</label>
                 <label hidden>UI Scale<select id="ui-scale-select"><option value="compact">Compact</option><option value="standard">Standard</option><option value="large">Large</option></select></label>
               </div>
-            </section>
-            <section class="menu__section menu__advanced" aria-label="Local leaderboard" hidden>
-              <div class="menu__section-head">
-                <strong>Local Leaderboard</strong>
-                <span id="leaderboard-status">Top runs</span>
-              </div>
-              <ol id="local-leaderboard" class="local-leaderboard"></ol>
-            </section>
-            <section class="menu__section menu__advanced" aria-label="Global leaderboard" hidden>
-              <div class="menu__section-head">
-                <strong>Global Leaderboard</strong>
-                <span id="global-leaderboard-status">Offline</span>
-              </div>
-              <ol id="global-leaderboard" class="local-leaderboard"></ol>
             </section>
             <p class="menu__meta" hidden>
               Keyboard: arrows or A/D to move, Space/W to jump, Shift/K to dash, Esc to pause. Mobile: use the on-screen arrows, Jump, and Dash.
