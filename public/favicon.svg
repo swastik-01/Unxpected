@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Unxpected app icon</title>
+  <desc id="desc">A levitating avatar reaching up with one hand toward a glitch energy orb.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#172033"/>
+      <stop offset="0.58" stop-color="#090b12"/>
+      <stop offset="1" stop-color="#03050a"/>
+    </radialGradient>
+    <radialGradient id="cyanGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#45d7ff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#45d7ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fff8ff"/>
+      <stop offset=".42" stop-color="#ff7ab6"/>
+      <stop offset="1" stop-color="#ff2d8d" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="244" r="198" fill="url(#cyanGlow)" opacity=".7"/>
+  <path d="M110 377c73 44 219 44 292 0" fill="none" stroke="#45d7ff" stroke-width="12" stroke-linecap="round" opacity=".44"/>
+  <path d="M147 424c51 26 167 26 218 0" fill="none" stroke="#58f0a7" stroke-width="10" stroke-linecap="round" opacity=".48"/>
+  <ellipse cx="256" cy="372" rx="139" ry="38" fill="#58f0a7" opacity=".18"/>
+  <circle cx="357" cy="86" r="74" fill="url(#orbGlow)" filter="url(#softGlow)"/>
+  <circle cx="357" cy="86" r="33" fill="#ff7ab6"/>
+  <path d="M357 48v76M319 86h76" fill="none" stroke="#58f0a7" stroke-width="16" stroke-linecap="round"/>
+  <path d="M205 216c-13-36 11-75 51-75s64 39 51 75l-25 115c-7 31-45 31-52 0z" fill="#111727"/>
+  <path d="M218 213c-9-25 9-54 38-54s47 29 38 54l-21 108c-4 20-30 20-34 0z" fill="#f5f8ff"/>
+  <path d="M237 267h38v62h-38z" fill="#b8c4d9" opacity=".84"/>
+  <rect x="193" y="70" width="126" height="142" rx="52" fill="#111727"/>
+  <rect x="209" y="86" width="94" height="110" rx="39" fill="#f5f8ff"/>
+  <rect x="216" y="111" width="80" height="48" rx="19" fill="#111727"/>
+  <rect x="235" y="123" width="46" height="23" rx="9" fill="#45d7ff"/>
+  <path d="M243 129h25" stroke="#ffffff" stroke-width="8" stroke-linecap="round" opacity=".62"/>
+  <path d="M218 249 158 275 120 320M294 249 325 174 354 93M231 329l-44 54-47 27M281 329l56 38 47 36" fill="none" stroke="#111727" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M218 249 158 275 120 320M294 249 325 174 354 93" fill="none" stroke="#d8ffe8" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M231 329l-44 54-47 27" fill="none" stroke="#45d7ff" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M281 329l56 38 47 36" fill="none" stroke="#58f0a7" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="120" cy="320" r="22" fill="#d8ffe8"/>
+  <circle cx="354" cy="93" r="22" fill="#d8ffe8"/>
+  <rect x="113" y="398" width="78" height="34" rx="11" fill="#f5f8ff"/>
+  <rect x="349" y="392" width="77" height="34" rx="11" fill="#f5f8ff"/>
+</svg>
