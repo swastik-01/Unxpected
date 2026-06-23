@@ -136,7 +136,7 @@ function looksLikeGameplayScreen(filePath) {
   const png = decodePngRgba(filePath);
   if (!png) return false;
 
-  let neonGameplayPixels = 0;
+  let themedPlatformPixels = 0;
   const startY = Math.floor(png.height * 0.48);
   for (let y = startY; y < png.height; y += 1) {
     for (let x = 0; x < png.width; x += 1) {
@@ -145,12 +145,16 @@ function looksLikeGameplayScreen(filePath) {
       const green = png.data[index + 1];
       const blue = png.data[index + 2];
       const alpha = png.data[index + 3];
-      if (alpha > 180 && green > 125 && green > red * 1.45 && blue > 60 && blue < 230) {
-        neonGameplayPixels += 1;
+      const max = Math.max(red, green, blue);
+      const min = Math.min(red, green, blue);
+      const isBrightThemeSurface = alpha > 180 && max > 125 && max - min > 42;
+      const isNotWhiteText = !(red > 210 && green > 210 && blue > 210);
+      if (isBrightThemeSurface && isNotWhiteText) {
+        themedPlatformPixels += 1;
       }
     }
   }
-  return neonGameplayPixels > png.width * 2;
+  return themedPlatformPixels > png.width * 2;
 }
 
 function decodePngRgba(filePath) {
