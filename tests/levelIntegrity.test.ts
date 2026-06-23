@@ -9,6 +9,20 @@ const worldBounds = {
 };
 
 const resetCriticalIds = ['collapse_01', 'projectile_01'] as const;
+const coreRoutePlatformIds = [
+  'ground_00',
+  'ground_01',
+  'wait_lift_01',
+  'collapse_01',
+  'phase_01',
+  'ground_03',
+  'jump_wall_sensor',
+  'ground_04',
+  'route_drift_base_01',
+  'ground_05'
+] as const;
+const maxCoreRouteGapPx = 190;
+const maxCoreRouteRisePx = 125;
 const expectedActionsByLevel: Array<{ action: MutationAction; from: number }> = [
   { action: 'sky_strike', from: 3 },
   { action: 'weapon_fire', from: 5 },
@@ -45,6 +59,8 @@ describe('campaign level integrity', () => {
       for (const criticalId of resetCriticalIds) {
         expect(ids.has(criticalId), `Level ${levelIndex} missing ${criticalId}`).toBe(true);
       }
+
+      expectCoreRouteReachable(levelIndex, level);
     }
   });
 
@@ -129,6 +145,28 @@ function expectMutation(levelIndex: number, entity: EntitySchema) {
   if (event.mutated_state.velocity) {
     expect(Number.isFinite(event.mutated_state.velocity.x), label).toBe(true);
     expect(Number.isFinite(event.mutated_state.velocity.y), label).toBe(true);
+  }
+}
+
+function expectCoreRouteReachable(levelIndex: number, level: DynamicLevelSchema) {
+  const route = coreRoutePlatformIds.map((id) => {
+    const entity = level.entities.find((candidate) => candidate.entity_id === id);
+    expect(entity, `Level ${levelIndex} missing route platform ${id}`).toBeDefined();
+    expect(entity?.base_type, `Level ${levelIndex} ${id} should be a platform`).toBe('platform');
+    expect(entity?.collision_mask, `Level ${levelIndex} ${id} should support the player by default`).toBe('solid');
+    return entity as EntitySchema;
+  });
+
+  for (let index = 1; index < route.length; index += 1) {
+    const previous = route[index - 1];
+    const current = route[index];
+    const previousRight = previous.transform.x + previous.transform.width;
+    const gap = current.transform.x - previousRight;
+    const upwardRise = previous.transform.y - current.transform.y;
+    const label = `Level ${levelIndex} route ${previous.entity_id} -> ${current.entity_id}`;
+
+    expect(gap, `${label} gap is too wide for a reliable platforming route`).toBeLessThanOrEqual(maxCoreRouteGapPx);
+    expect(upwardRise, `${label} rises too sharply for a readable jump`).toBeLessThanOrEqual(maxCoreRouteRisePx);
   }
 }
 

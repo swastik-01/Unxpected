@@ -160,14 +160,14 @@ export function createOpeningLevel(mode: MenuMode, aggression: number, dailyAnom
       }
     }),
     platform('ground_03', 2140, 650, 330, 70, { render_layer: 'visual_grass_block' }),
-    platform('jump_wall_sensor', 2540, 465, 42, 185, {
-      render_layer: 'transparent',
-      collision_mask: 'pass_through',
+    platform('jump_wall_sensor', 2530, 620, 150, 30, {
+      render_layer: 'visual_shadow_block',
+      collision_mask: 'solid',
       mutation_event: {
         trigger_condition: 'player_input_active',
         condition_value: 'jump',
         action: 'physics_gaslight',
-        hint: dailyAnomaly?.modifier === 'mirror_wall' ? 'Daily mirror wall read the jump' : 'Jump read created a wall',
+        hint: dailyAnomaly?.modifier === 'mirror_wall' ? 'Daily mirror bridge reinforced' : 'Jump read reinforced the bridge',
         once: true,
         telegraph_ms: dailyAnomaly?.modifier === 'mirror_wall' ? 160 : 110,
         active_profiles: wallProfiles,
@@ -179,6 +179,7 @@ export function createOpeningLevel(mode: MenuMode, aggression: number, dailyAnom
       }
     }),
     platform('ground_04', 2715, 650, 340, 70, { render_layer: 'visual_grass_block' }),
+    platform('route_drift_base_01', 3090, 626, 200, 32, { render_layer: 'visual_neon_block' }),
     platform('mercy_bridge', 3065, 612, 230, 32, {
       render_layer: 'transparent',
       collision_mask: 'pass_through',
