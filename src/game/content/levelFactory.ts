@@ -1,6 +1,6 @@
-import type { DailyAnomaly, DynamicLevelSchema, EntitySchema, MenuMode, PlayerProfile, RouteArchetypeId } from '../types';
+import type { DailyAnomaly, DynamicLevelSchema, EntitySchema, LevelBlueprint, MenuMode, PlayerProfile, RouteArchetypeId } from '../types';
 import { maxCampaignLevel } from '../constants';
-import { archetypeForLevel, themeForLevel } from './levelThemes';
+import { blueprintForLevel, chapterForLevel } from './levelThemes';
 
 const platform = (
   entity_id: string,
@@ -78,12 +78,43 @@ const weaponCache = (entity_id: string, x: number, y: number): EntitySchema => (
   mutation_event: null
 });
 
+const flickerFloor = (
+  entity_id: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  conditionValue: number,
+  telegraphMs: number,
+  hint: string
+): EntitySchema => platform(entity_id, x, y, width, height, {
+  behavior: 'flicker_floor',
+  render_layer: 'visual_grass_block',
+  mutation_event: {
+    trigger_condition: 'player_distance_less_than',
+    condition_value: conditionValue,
+    action: 'floor_collapse',
+    hint,
+    once: false,
+    telegraph_ms: telegraphMs,
+    active_profiles: ['Balanced', 'Speedrunner', 'Methodical', 'Panicked', 'Safe-Zoner'],
+    mutated_state: {
+      render_layer: 'visual_glitch_block',
+      collision_mask: 'pass_through',
+      alpha: 0.2,
+      velocity: { x: 0, y: 250 }
+    }
+  }
+});
+
 export function createOpeningLevel(mode: MenuMode, aggression: number, dailyAnomaly?: DailyAnomaly, levelIndex = 1): DynamicLevelSchema {
   const training = mode === 'training';
   const daily = mode === 'daily' ? dailyAnomaly : undefined;
   const campaignLevel = clampLevel(levelIndex);
-  const theme = themeForLevel(campaignLevel, dailyAnomaly?.seed);
-  const routeArchetype = archetypeForLevel(campaignLevel, dailyAnomaly?.seed);
+  const chapter = chapterForLevel(campaignLevel);
+  const blueprint = blueprintForLevel(campaignLevel, dailyAnomaly?.seed);
+  const theme = chapter.theme;
+  const routeArchetype = blueprint.routeArchetype;
   const levelPressure = mode === 'standard' ? Math.min(0.42, (campaignLevel - 1) / (maxCampaignLevel - 1) * 0.42) : 0;
   const runSeed = (dailyAnomaly?.seed ?? Math.round((Date.now() % 1_000_000) + Math.random() * 100_000)) + campaignLevel * 9973;
   const random = seededRandom(runSeed);
@@ -120,6 +151,7 @@ export function createOpeningLevel(mode: MenuMode, aggression: number, dailyAnom
     ? daily.modifier === 'coin_betrayal' ? 'lethal' : 'safe_warning'
     : trapScale > 0.55 ? 'lethal' : 'none';
   const bridgeProfile: PlayerProfile = dailyAnomaly?.modifier === 'pressure_plate' ? 'Balanced' : 'Methodical';
+  const blueprintArchitecture = createBlueprintArchitecture(blueprint, training, daily, trapScale, levelPressure);
   const campaignVariants = createCampaignVariants(campaignLevel, training, daily, random, trapScale, levelPressure, routeArchetype.id);
 
   const entities: EntitySchema[] = [
@@ -231,6 +263,7 @@ export function createOpeningLevel(mode: MenuMode, aggression: number, dailyAnom
       }
     }),
     platform('goal_lip_01', 3970, 650, 150, 70, { render_layer: 'visual_grass_block' }),
+    ...blueprintArchitecture,
     ...campaignVariants,
     coin('coin_00', 520, 560),
     coin('coin_01', 900, 560),
@@ -270,10 +303,15 @@ export function createOpeningLevel(mode: MenuMode, aggression: number, dailyAnom
   ];
 
   return {
+    audioProfile: chapter.audioProfile,
+    blueprintId: blueprint.id,
+    chapterId: chapter.id,
+    chapterTheme: chapter.theme,
     session_id: `px_${runSeed}_${mode}_L${campaignLevel}${dailyAnomaly ? `_${dailyAnomaly.dateKey}` : ''}`,
     tick_sequence: 0,
     theme,
     route_archetype: routeArchetype,
+    routeSignature: blueprint.routeSignature,
     global_environment: {
       gravity_vector: { x: 0, y: 980 },
       friction_multiplier: 1,
@@ -727,6 +765,308 @@ function createCampaignVariants(
         }
       }
     }));
+  }
+
+  return variants;
+}
+
+function createBlueprintArchitecture(
+  blueprint: LevelBlueprint,
+  training: boolean,
+  daily: DailyAnomaly | undefined,
+  trapScale: number,
+  levelPressure: number
+) {
+  if (training) return [];
+
+  const campaignLevel = blueprint.levelIndex;
+  const index = blueprint.blueprintIndex;
+  const tier = Math.floor((campaignLevel - 1) / 10);
+  const levelTag = `bp_${String(campaignLevel).padStart(2, '0')}`;
+  const variants: EntitySchema[] = [];
+  const allProfiles: PlayerProfile[] = ['Balanced', 'Speedrunner', 'Methodical', 'Panicked', 'Safe-Zoner'];
+  const telegraphMs = Math.max(330, 820 - tier * 42 - Math.round(trapScale * 120));
+  const pressureReach = 78 + Math.round(levelPressure * 140) + tier * 4;
+  variants.push(platform(`${levelTag}_chapter_anchor`, 560 + (tier % 5) * 36 + (index % 3) * 18, 590 - (tier % 4) * 24, 88 + (tier % 3) * 18, 24, {
+    render_layer: tier % 2 === 0 ? 'visual_neon_block' : 'visual_shadow_block'
+  }));
+
+  switch (blueprint.routeArchetype.id) {
+    case 'core_run':
+      variants.push(platform(`${levelTag}_readable_step`, 1160 + index * 9, 522 - (tier % 2) * 12, 116, 26, {
+        render_layer: tier % 2 === 0 ? 'visual_neon_block' : 'visual_shadow_block'
+      }));
+      variants.push(coin(`${levelTag}_route_coin`, 1214 + index * 9, 464, trapScale > 0.7 ? 'safe_warning' : 'none'));
+      break;
+
+    case 'sky_ladder':
+      variants.push(platform(`${levelTag}_sky_step_01`, 760 + index * 5, 548, 126, 26, {
+        render_layer: 'visual_neon_block'
+      }));
+      variants.push(platform(`${levelTag}_sky_step_02`, 952 + index * 5, 496, 126, 26, {
+        render_layer: 'visual_shadow_block'
+      }));
+      variants.push(platform(`${levelTag}_sky_step_03`, 1144 + index * 5, 444, 132, 26, {
+        render_layer: 'visual_neon_block'
+      }));
+      variants.push(hazard(`${levelTag}_sky_drop`, 1650 + index * 24, 70, 52, 52, {
+        behavior: 'sky_fall',
+        render_layer: 'transparent',
+        collision_mask: 'sensor',
+        mutation_event: {
+          trigger_condition: daily ? 'time_elapsed_ms' : 'player_distance_less_than',
+          condition_value: daily ? 3600 + index * 170 : 600 + tier * 12,
+          action: 'sky_strike',
+          hint: `${blueprint.label}: overhead object falling`,
+          once: true,
+          telegraph_ms: telegraphMs,
+          active_profiles: allProfiles,
+          mutated_state: {
+            render_layer: 'visual_rock',
+            collision_mask: 'lethal_hazard',
+            alpha: 1,
+            velocity: { x: index % 2 === 0 ? -28 : 26, y: 360 + tier * 32 + Math.round(trapScale * 90) }
+          }
+        }
+      }));
+      break;
+
+    case 'tunnel_cut':
+      variants.push(platform(`${levelTag}_tunnel_ceiling_01`, 1715 + index * 7, 500, 194, 28, {
+        render_layer: 'visual_shadow_block'
+      }));
+      variants.push(platform(`${levelTag}_tunnel_floor_step`, 1895 + index * 5, 610, 120, 28, {
+        render_layer: 'visual_glitch_block'
+      }));
+      variants.push(coin(`${levelTag}_false_safe_coin`, 1960 + index * 5, 552, trapScale > 0.55 ? 'safe_warning' : 'none'));
+      break;
+
+    case 'hunter_lane':
+      variants.push(platform(`${levelTag}_hunter_lane_step`, 1540 + index * 10, 552, 118, 26, {
+        render_layer: 'visual_shadow_block'
+      }));
+      variants.push(hazard(`${levelTag}_hunter`, 1820 + index * 13, 590, 48, 64, {
+        behavior: 'hunter_chase',
+        render_layer: 'transparent',
+        collision_mask: 'sensor',
+        mutation_event: {
+          trigger_condition: campaignLevel >= 10 || daily ? 'player_distance_less_than' : 'profile_detected',
+          condition_value: campaignLevel >= 10 || daily ? 575 : 'Methodical',
+          action: 'hunter_spawn',
+          hint: `${blueprint.label}: hunter tracking your pace`,
+          once: true,
+          telegraph_ms: telegraphMs,
+          active_profiles: allProfiles,
+          mutated_state: {
+            render_layer: 'visual_hunter',
+            collision_mask: 'lethal_hazard',
+            alpha: 1,
+            velocity: { x: -(92 + tier * 16), y: 0 }
+          }
+        }
+      }));
+      break;
+
+    case 'collapse_bridge':
+      variants.push(flickerFloor(
+        `${levelTag}_flicker_floor_01`,
+        1725 + index * 4,
+        618,
+        92,
+        28,
+        pressureReach,
+        telegraphMs,
+        `${blueprint.label}: floor disappearing then rebuilding`
+      ));
+      variants.push(flickerFloor(
+        `${levelTag}_flicker_floor_02`,
+        3295 + index * 3,
+        618,
+        86,
+        28,
+        pressureReach + 18,
+        telegraphMs,
+        `${blueprint.label}: bridge flicker re-armed`
+      ));
+      if (campaignLevel >= 12) {
+        variants.push(hazard(`${levelTag}_portal_pressure_shot`, 3860, 566 - (index % 2) * 28, 56, 18, {
+          render_layer: 'transparent',
+          collision_mask: 'sensor',
+          mutation_event: {
+            trigger_condition: 'player_distance_less_than',
+            condition_value: 540 + tier * 28,
+            action: 'weapon_fire',
+            hint: `${blueprint.label}: portal lane crossfire armed`,
+            once: true,
+            telegraph_ms: Math.max(330, telegraphMs - 80),
+            active_profiles: allProfiles,
+            mutated_state: {
+              render_layer: 'visual_projectile',
+              collision_mask: 'lethal_hazard',
+              alpha: 1,
+              velocity: { x: -(360 + tier * 28 + Math.round(trapScale * 80)), y: 0 }
+            }
+          }
+        }));
+      }
+      break;
+
+    case 'split_path':
+      variants.push(platform(`${levelTag}_split_upper_01`, 1835 + index * 5, 494, 128, 26, {
+        render_layer: 'visual_neon_block'
+      }));
+      variants.push(platform(`${levelTag}_split_upper_02`, 2040 + index * 5, 454, 126, 26, {
+        render_layer: 'visual_shadow_block'
+      }));
+      variants.push(platform(`${levelTag}_split_rejoin`, 2265 + index * 3, 514, 118, 26, {
+        render_layer: 'visual_neon_block'
+      }));
+      variants.push(coin(`${levelTag}_split_reward`, 2100 + index * 5, 392, trapScale > 0.68 ? 'safe_warning' : 'none'));
+      if (campaignLevel >= 16) {
+        variants.push(hazard(`${levelTag}_split_sky_drop`, 2145 + index * 9, 66, 48, 48, {
+          behavior: 'sky_fall',
+          render_layer: 'transparent',
+          collision_mask: 'sensor',
+          mutation_event: {
+            trigger_condition: 'time_elapsed_ms',
+            condition_value: 4200 + index * 150,
+            action: 'sky_strike',
+            hint: `${blueprint.label}: upper path overhead drop`,
+            once: true,
+            telegraph_ms: telegraphMs,
+            active_profiles: allProfiles,
+            mutated_state: {
+              render_layer: 'visual_rock',
+              collision_mask: 'lethal_hazard',
+              alpha: 1,
+              velocity: { x: index % 2 === 0 ? 34 : -32, y: 390 + tier * 30 }
+            }
+          }
+        }));
+      }
+      break;
+
+    case 'vertical_gate':
+      variants.push(platform(`${levelTag}_gate_step_01`, 3150, 574, 108, 26, {
+        render_layer: 'visual_neon_block'
+      }));
+      variants.push(platform(`${levelTag}_gate_step_02`, 3298, 518, 106, 26, {
+        render_layer: 'visual_shadow_block'
+      }));
+      variants.push(platform(`${levelTag}_gate_step_03`, 3450, 462, 110, 26, {
+        render_layer: 'visual_neon_block'
+      }));
+      variants.push(hazard(`${levelTag}_vertical_crusher`, 3588, 374, 62, 88, {
+        render_layer: 'transparent',
+        collision_mask: 'sensor',
+        mutation_event: {
+          trigger_condition: 'player_distance_less_than',
+          condition_value: 620 + tier * 22,
+          action: 'elevator_crush',
+          hint: `${blueprint.label}: vertical crusher dropping`,
+          once: true,
+          telegraph_ms: telegraphMs,
+          active_profiles: allProfiles,
+          mutated_state: {
+            render_layer: 'visual_warning_block',
+            collision_mask: 'lethal_hazard',
+            alpha: 1,
+            velocity: { x: 0, y: 250 + tier * 24 }
+          }
+        }
+      }));
+      if (campaignLevel >= 17) {
+        variants.push(flickerFloor(
+          `${levelTag}_gate_recovery_plate`,
+          3304,
+          618,
+          78,
+          28,
+          pressureReach + 12,
+          telegraphMs,
+          `${blueprint.label}: recovery plate flickering near the gate`
+        ));
+      }
+      break;
+
+    case 'crossfire_gap':
+      variants.push(platform(`${levelTag}_crossfire_lip`, 2960 + index * 4, 598, 102, 28, {
+        render_layer: 'visual_shadow_block'
+      }));
+      variants.push(hazard(`${levelTag}_bottom_turret`, 3065 + index * 12, 714, 18, 58, {
+        render_layer: 'transparent',
+        collision_mask: 'sensor',
+        mutation_event: {
+          trigger_condition: campaignLevel >= 28 ? 'time_elapsed_ms' : 'player_distance_less_than',
+          condition_value: campaignLevel >= 28 ? 4300 + index * 160 : 510,
+          action: 'weapon_fire',
+          hint: `${blueprint.label}: floor turret between platforms`,
+          once: true,
+          telegraph_ms: telegraphMs,
+          active_profiles: allProfiles,
+          mutated_state: {
+            render_layer: 'visual_projectile',
+            collision_mask: 'lethal_hazard',
+            alpha: 1,
+            velocity: { x: index % 2 === 0 ? -16 : 16, y: -(330 + tier * 36 + Math.round(trapScale * 70)) }
+          }
+        }
+      }));
+      break;
+
+    case 'weapon_arena':
+      variants.push(platform(`${levelTag}_arena_step_01`, 3375, 555, 118, 26, {
+        render_layer: 'visual_neon_block'
+      }));
+      variants.push(platform(`${levelTag}_arena_step_02`, 3546, 512, 112, 26, {
+        render_layer: 'visual_shadow_block'
+      }));
+      if (campaignLevel >= 61) {
+        variants.push(weaponCache(`${levelTag}_weapon_cache`, 3300 - index * 4, 552));
+        variants.push(hazard(`${levelTag}_arena_guard`, 3675 - index * 5, 590, 52, 66, {
+          behavior: 'hunter_chase',
+          render_layer: 'transparent',
+          collision_mask: 'sensor',
+          mutation_event: {
+            trigger_condition: 'player_distance_less_than',
+            condition_value: 760,
+            action: 'hunter_spawn',
+            hint: `${blueprint.label}: armed guard entering arena`,
+            once: true,
+            telegraph_ms: Math.max(320, telegraphMs - 70),
+            active_profiles: allProfiles,
+            mutated_state: {
+              render_layer: 'visual_hunter',
+              collision_mask: 'lethal_hazard',
+              alpha: 1,
+              velocity: { x: -(128 + tier * 20), y: 0 }
+            }
+          }
+        }));
+      }
+      variants.push(hazard(`${levelTag}_final_lane_shot`, 3885, 538, 56, 18, {
+        render_layer: 'transparent',
+        collision_mask: 'sensor',
+        mutation_event: {
+          trigger_condition: 'player_distance_less_than',
+          condition_value: 520 + tier * 28,
+          action: 'weapon_fire',
+          hint: `${blueprint.label}: final portal shot armed`,
+          once: true,
+          telegraph_ms: Math.max(300, telegraphMs - 90),
+          active_profiles: allProfiles,
+          mutated_state: {
+            render_layer: 'visual_projectile',
+            collision_mask: 'lethal_hazard',
+            alpha: 1,
+            velocity: { x: -(410 + tier * 34 + Math.round(trapScale * 90)), y: index % 2 === 0 ? -18 : 16 }
+          }
+        }
+      }));
+      break;
+
+    default:
+      break;
   }
 
   return variants;

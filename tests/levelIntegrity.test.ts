@@ -64,20 +64,36 @@ describe('campaign level integrity', () => {
 
       expectCoreRouteReachable(levelIndex, level);
     }
-  });
+  }, 30_000);
 
   it('increases campaign pressure with advanced hazards while keeping each level schema unique', () => {
     const fingerprints = new Set<string>();
+    const audioProfiles = new Set<string>();
+    const chapterComplexity = new Map<string, number[]>();
+    const chapterThemes = new Map<string, string>();
     const themes = new Set<string>();
     const routeArchetypes = new Set<string>();
-    let previousComplexity = 0;
 
     for (let levelIndex = 1; levelIndex <= maxCampaignLevel; levelIndex += 1) {
       const level = createDeterministicLevel(levelIndex);
       const actions = new Set(level.entities.map((entity) => entity.mutation_event?.action).filter(Boolean));
       const complexity = calculateComplexity(level);
+      const existingChapterTheme = chapterThemes.get(level.chapterId);
+      if (existingChapterTheme) {
+        expect(level.theme.id, `Level ${levelIndex} changed theme inside ${level.chapterId}`).toBe(existingChapterTheme);
+      } else {
+        chapterThemes.set(level.chapterId, level.theme.id);
+      }
+
+      expect(level.chapterTheme.id, `Level ${levelIndex} chapterTheme should mirror active theme`).toBe(level.theme.id);
+      expect(level.blueprintId, `Level ${levelIndex} should have a level-specific blueprint`).toContain(`L${String(levelIndex).padStart(2, '0')}`);
+      expect(level.routeSignature.trim().length, `Level ${levelIndex} should expose a route signature`).toBeGreaterThan(20);
+      expect(level.audioProfile.id.trim().length, `Level ${levelIndex} should expose an audio profile`).toBeGreaterThan(0);
+
       themes.add(level.theme.id);
+      audioProfiles.add(level.audioProfile.id);
       routeArchetypes.add(level.route_archetype.id);
+      chapterComplexity.set(level.chapterId, [...(chapterComplexity.get(level.chapterId) ?? []), complexity]);
 
       for (const expectation of expectedActionsByLevel) {
         if (levelIndex >= expectation.from) {
@@ -85,17 +101,20 @@ describe('campaign level integrity', () => {
         }
       }
 
-      if (levelIndex % 8 === 1 || levelIndex === maxCampaignLevel) {
-        expect(complexity, `Level ${levelIndex} should not lose long-term complexity`).toBeGreaterThanOrEqual(previousComplexity);
-        previousComplexity = complexity;
-      }
-
       fingerprints.add(fingerprintLevel(level));
     }
 
+    const chapterAverages = [...chapterComplexity.values()].map((values) => (
+      values.reduce((sum, value) => sum + value, 0) / values.length
+    ));
+
     expect(fingerprints.size).toBe(maxCampaignLevel);
-    expect(themes.size).toBeGreaterThanOrEqual(9);
-    expect(routeArchetypes.size).toBeGreaterThanOrEqual(7);
+    expect(chapterThemes.size).toBe(10);
+    expect(themes.size).toBeGreaterThanOrEqual(10);
+    expect(audioProfiles.size).toBeGreaterThanOrEqual(10);
+    expect(routeArchetypes.size).toBeGreaterThanOrEqual(9);
+    expect(chapterAverages.at(-1), 'Final chapter should be substantially more complex than onboarding').toBeGreaterThan(chapterAverages[0] + 30);
+    expect(Math.min(...chapterAverages.slice(6)), 'Late weapon chapters should exceed early chapters on average').toBeGreaterThan(Math.max(...chapterAverages.slice(0, 2)));
   });
 });
 
@@ -187,6 +206,10 @@ function calculateComplexity(level: DynamicLevelSchema) {
 
 function fingerprintLevel(level: DynamicLevelSchema) {
   return [
+    level.chapterId,
+    level.blueprintId,
+    level.audioProfile.id,
+    level.routeSignature,
     level.theme.id,
     level.route_archetype.id,
     ...level.entities

@@ -66,6 +66,7 @@ const notice = requiredElement<HTMLElement>('#hud-notice');
 const feed = requiredElement<HTMLElement>('#mutation-feed');
 const mobileControls = requiredElement<HTMLElement>('#mobile-controls');
 const dashButton = requiredElement<HTMLButtonElement>('[data-action="dash"]');
+const shootButton = requiredElement<HTMLButtonElement>('[data-action="down"]');
 const tutorial = requiredElement<HTMLElement>('#tutorial-card');
 const tutorialStep = requiredElement<HTMLElement>('#tutorial-step');
 const tutorialProgress = requiredElement<HTMLElement>('#tutorial-progress');
@@ -128,6 +129,7 @@ const getAggression = () => 1;
 const formatScore = new Intl.NumberFormat('en-US');
 
 document.body.classList.add('is-menu');
+shootButton.hidden = true;
 renderMenuProgression();
 void renderGlobalLeaderboard();
 
@@ -177,6 +179,7 @@ function startGame(mode: MenuMode, levelOverride?: number) {
   pauseMenu.classList.add('pause-menu--hidden');
   hud.classList.remove('hud--hidden');
   mobileControls.classList.remove('mobile-controls--hidden');
+  shootButton.hidden = true;
   if (game) {
     game.destroy(true);
   }
@@ -192,6 +195,7 @@ function pauseGame() {
   input.releaseAll();
   activeScene?.setPaused(true);
   mobileControls.classList.add('mobile-controls--hidden');
+  shootButton.hidden = true;
   tutorial.classList.add('tutorial-card--hidden');
   pauseMenu.classList.remove('pause-menu--hidden');
 }
@@ -211,6 +215,7 @@ function quitToMenu() {
   document.body.classList.add('is-menu');
   hud.classList.add('hud--hidden');
   mobileControls.classList.add('mobile-controls--hidden');
+  shootButton.hidden = true;
   tutorial.classList.add('tutorial-card--hidden');
   pauseMenu.classList.add('pause-menu--hidden');
   resetPauseOverlay();
@@ -251,6 +256,11 @@ function renderHud(snapshot: HudSnapshot) {
   dashMeter.classList.toggle('dash-meter--charging', !dashReady);
   dashButton.classList.toggle('mobile-controls__action--ready', dashReady);
   dashButton.setAttribute('aria-label', dashReady ? 'Dash ready' : 'Dash recharging');
+  const weaponReady = snapshot.weaponReady && snapshot.weaponCharges > 0;
+  shootButton.hidden = !weaponReady;
+  shootButton.classList.toggle('mobile-controls__action--ready', weaponReady);
+  shootButton.textContent = weaponReady ? `Shoot ${snapshot.weaponCharges}` : 'Shoot';
+  shootButton.setAttribute('aria-label', weaponReady ? `Shoot, ${snapshot.weaponCharges} charges` : 'Shoot unavailable');
   notice.textContent = snapshot.notice;
   const visibleMutations = snapshot.mutations
     .filter((entry) => entry && entry !== 'Observer online')

@@ -30,22 +30,44 @@ describe('campaign level factory', () => {
   });
 
   it('changes theme and route identity across early campaign levels', () => {
-    const earlyLevels = Array.from({ length: 14 }, (_, index) => createOpeningLevel('standard', 0.85, undefined, index + 1));
-    const themes = new Set(earlyLevels.map((level) => level.theme.id));
+    const earlyLevels = Array.from({ length: 20 }, (_, index) => createOpeningLevel('standard', 0.85, undefined, index + 1));
+    const chapterOneThemes = new Set(earlyLevels.slice(0, 10).map((level) => level.theme.id));
+    const chapterTwoThemes = new Set(earlyLevels.slice(10, 20).map((level) => level.theme.id));
+    const audioProfiles = new Set(earlyLevels.slice(0, 10).map((level) => level.audioProfile.id));
     const routes = new Set(earlyLevels.map((level) => level.route_archetype.id));
+    const fingerprints = new Set(earlyLevels.map((level) => `${level.blueprintId}|${level.routeSignature}`));
     const level14 = earlyLevels[13];
     const level14Ids = level14.entities.map((entity) => entity.entity_id);
 
-    expect(themes.size).toBeGreaterThanOrEqual(9);
-    expect(routes.size).toBeGreaterThanOrEqual(7);
+    expect(chapterOneThemes).toEqual(new Set(['neon_city']));
+    expect(chapterTwoThemes).toEqual(new Set(['overgrown_ruins']));
+    expect(audioProfiles).toEqual(new Set(['neon_pulse']));
+    expect(routes.size).toBeGreaterThanOrEqual(9);
+    expect(fingerprints.size).toBe(20);
     expect(level14.route_archetype.id).toBe('hunter_lane');
     expect(level14Ids).toContain('route_hunter_shadow_01');
+    expect(level14Ids.some((id) => id.startsWith('bp_14_hunter'))).toBe(true);
+  });
+
+  it('keeps every 10-level chapter visually and sonically fixed before changing identity', () => {
+    const samples = [1, 10, 11, 20, 21, 30, 91, 99].map((levelIndex) => createOpeningLevel('standard', 1, undefined, levelIndex));
+
+    expect(samples[0].chapterId).toBe(samples[1].chapterId);
+    expect(samples[0].theme.id).toBe(samples[1].theme.id);
+    expect(samples[0].audioProfile.id).toBe(samples[1].audioProfile.id);
+    expect(samples[2].chapterId).toBe(samples[3].chapterId);
+    expect(samples[0].theme.id).not.toBe(samples[2].theme.id);
+    expect(samples[2].theme.id).not.toBe(samples[4].theme.id);
+    expect(samples[6].theme.id).toBe('paradox_core');
+    expect(samples[7].route_archetype.id).toBe('weapon_arena');
   });
 
   it('adds higher-level route variants without making the main path impossible', () => {
     const level = createOpeningLevel('standard', 1, undefined, 72);
     const ids = level.entities.map((entity) => entity.entity_id);
 
+    expect(level.chapterId).toBe('chapter_08_cave');
+    expect(level.audioProfile.id).toBe('crystal_hum');
     expect(ids).toContain('bottom_shot_01');
     expect(ids).toContain('bottom_shot_02');
     expect(ids).toContain('tunnel_ceiling_01');

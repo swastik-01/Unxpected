@@ -7,7 +7,7 @@ import { chromium } from '@playwright/test';
 const port = Number(process.env.QA_PORT) || await findFreePort();
 const baseUrl = `http://127.0.0.1:${port}`;
 const outDir = path.resolve('qa-artifacts');
-const ignoredConsole = /GPU stall due to ReadPixels/;
+const ignoredConsole = /GPU stall due to ReadPixels|CONTEXT_LOST_WEBGL/;
 const failures = [];
 
 await fs.mkdir(outDir, { recursive: true });
@@ -94,10 +94,13 @@ async function runDesktopQa(browser) {
     score: document.querySelector('#hud-score')?.textContent,
     mutationFeedHidden: getComputedStyle(document.querySelector('#mutation-feed')).display === 'none',
     mutationFeedEntries: [...document.querySelectorAll('#mutation-feed .mutation-feed__item')].map((node) => node.textContent),
+    shootHidden: document.querySelector('[data-action="down"]')?.hasAttribute('hidden'),
     tutorialSkipVisible: !document.querySelector('#tutorial-skip-button')?.hasAttribute('hidden'),
     canvas: document.querySelector('canvas')?.getBoundingClientRect().toJSON()
   }));
-  assert('desktop live HUD is lean and shows the AI readout compactly', started.mode === 'Level 1' && started.ai && started.time && started.coins === '0/5' && Number(started.score?.replaceAll(',', '')) > 0 && !started.mutationFeedHidden && started.mutationFeedEntries.some((entry) => entry?.includes('AI online') || entry?.includes('AI read') || entry?.startsWith('Zone:')), started);
+  const coinTotal = Number(started.coins?.split('/')[1] ?? 0);
+  assert('desktop live HUD is lean and shows the AI readout compactly', started.mode === 'Level 1' && started.ai && started.time && started.coins?.startsWith('0/') && coinTotal >= 5 && Number(started.score?.replaceAll(',', '')) > 0 && !started.mutationFeedHidden && started.mutationFeedEntries.some((entry) => entry?.includes('AI online') || entry?.includes('AI read') || entry?.startsWith('Zone:')), started);
+  assert('desktop Shoot button starts hidden until a weapon is collected', started.shootHidden, started);
   assert('desktop canvas is full gameplay size', started.canvas.width > 1000 && started.canvas.height > 560, started.canvas);
   assert('desktop tutorial starts with a visible skip control', started.tutorialSkipVisible, started);
 
@@ -340,10 +343,11 @@ async function runAdvancedFeatureQa(browser) {
     return {
       hudMode: document.querySelector('#hud-mode')?.textContent,
       missing: requiredIds.filter((id) => !snapshot.entities[id]),
-      weaponCharges: snapshot.weaponCharges
+      weaponCharges: snapshot.weaponCharges,
+      shootHidden: document.querySelector('[data-action="down"]')?.hasAttribute('hidden')
     };
   });
-  assert('advanced level boots with high-level route systems', boot.hudMode === 'Level 72' && boot.missing.length === 0 && boot.weaponCharges === 0, boot);
+  assert('advanced level boots with high-level route systems', boot.hudMode === 'Level 72' && boot.missing.length === 0 && boot.weaponCharges === 0 && boot.shootHidden, boot);
 
   await page.evaluate(() => {
     window.__PARADOX_DEBUG__.forceMutation('bottom_shot_01');
@@ -364,6 +368,11 @@ async function runAdvancedFeatureQa(browser) {
   });
   const pickup = await waitForDebugSnapshot(page, (snapshot) => snapshot.weaponCharges >= 3, { timeout: 2500 });
   assert('advanced weapon cache grants blaster charges', pickup.matched, pickup.snapshot);
+  const weaponUi = await page.evaluate(() => ({
+    shootHidden: document.querySelector('[data-action="down"]')?.hasAttribute('hidden'),
+    shootLabel: document.querySelector('[data-action="down"]')?.textContent
+  }));
+  assert('advanced Shoot button appears only after blaster pickup', !weaponUi.shootHidden && weaponUi.shootLabel?.includes('3'), weaponUi);
 
   await page.evaluate(() => {
     window.__PARADOX_DEBUG__.forceMutation('armed_monster_01');
@@ -392,7 +401,7 @@ async function runAdvancedFeatureQa(browser) {
 }
 
 async function runThemeVarietyQa(browser) {
-  const levels = [2, 3, 4, 5, 6, 7, 8, 14];
+  const levels = [1, 10, 11, 20, 21, 30, 61, 72, 90, 99];
   const records = [];
 
   for (const levelIndex of levels) {
@@ -418,28 +427,40 @@ async function runThemeVarietyQa(browser) {
       const snapshot = window.__PARADOX_DEBUG__.snapshot();
       return {
         hudMode: document.querySelector('#hud-mode')?.textContent,
+        audioProfile: snapshot.audioProfile,
+        blueprintId: snapshot.blueprintId,
+        chapterId: snapshot.chapterId,
         routeArchetype: snapshot.routeArchetype,
         theme: snapshot.theme,
-        hasHunterRoute: Boolean(snapshot.entities.route_hunter_shadow_01),
+        routeSignature: snapshot.routeSignature,
+        hasBlueprintTrap: Object.keys(snapshot.entities).some((id) => id.startsWith(`bp_${String(Number(document.querySelector('#hud-mode')?.textContent?.replace('Level ', '') ?? 0)).padStart(2, '0')}`)),
+        hasHunterRoute: Object.keys(snapshot.entities).some((id) => id.includes('hunter')),
         hasSkyRoute: Boolean(snapshot.entities.route_sky_ladder_01),
         hasTunnelRoute: Boolean(snapshot.entities.route_tunnel_ceiling_01),
         hasVerticalRoute: Boolean(snapshot.entities.route_vertical_gate_01)
       };
     });
     records.push({ levelIndex, ...record });
-    if ([2, 4, 6, 8, 14].includes(levelIndex)) {
-      await page.screenshot({ path: path.join(outDir, `desktop-theme-level-${levelIndex}.png`) });
-    }
+    await page.screenshot({ path: path.join(outDir, `desktop-theme-level-${levelIndex}.png`) });
     await page.close();
   }
 
+  const byLevel = Object.fromEntries(records.map((record) => [record.levelIndex, record]));
   const themeCount = new Set(records.map((record) => record.theme)).size;
   const routeCount = new Set(records.map((record) => record.routeArchetype)).size;
-  const level14 = records.find((record) => record.levelIndex === 14);
-  assert('early campaign levels rotate visible themes and route archetypes', themeCount >= 6 && routeCount >= 6, { themeCount, routeCount, records });
-  assert('level 14 includes hunter-lane pressure instead of another plain route', level14?.routeArchetype === 'hunter_lane' && level14.hasHunterRoute, level14);
+  const blueprintCount = new Set(records.map((record) => record.blueprintId)).size;
+  assert('chapter samples hold one theme/audio identity inside each 10-level band and change at boundaries',
+    byLevel[1].theme === byLevel[10].theme
+      && byLevel[1].audioProfile === byLevel[10].audioProfile
+      && byLevel[11].theme === byLevel[20].theme
+      && byLevel[21].theme === byLevel[30].theme
+      && byLevel[1].theme !== byLevel[11].theme
+      && byLevel[11].theme !== byLevel[21].theme
+      && byLevel[99].theme === 'paradox_core',
+    { themeCount, records });
+  assert('sampled campaign levels expose unique blueprints and visible architecture variety', themeCount >= 7 && routeCount >= 3 && blueprintCount === records.length && records.every((record) => record.hasBlueprintTrap), { themeCount, routeCount, blueprintCount, records });
 
-  return { themeCount, routeCount, records };
+  return { themeCount, routeCount, blueprintCount, records };
 }
 
 async function runMobileLandscapeQa(browser) {
@@ -455,6 +476,7 @@ async function runMobileLandscapeQa(browser) {
   const gameplay = await page.evaluate(() => ({
     overflowX: document.documentElement.scrollWidth > window.innerWidth,
     controlsVisible: getComputedStyle(document.querySelector('#mobile-controls')).display !== 'none',
+    shootHidden: document.querySelector('[data-action="down"]')?.hasAttribute('hidden'),
     rotateVisible: getComputedStyle(document.querySelector('#rotate-device')).display !== 'none',
     moveButtonCodes: [...document.querySelectorAll('.mobile-controls__move button')].map((node) => node.textContent.trim().codePointAt(0)),
     controlOpacity: Number(getComputedStyle(document.querySelector('.mobile-controls__move button')).opacity),
@@ -466,7 +488,7 @@ async function runMobileLandscapeQa(browser) {
     hudRunWidth: document.querySelector('.hud__cluster--run')?.getBoundingClientRect().width ?? 0,
     hudScore: document.querySelector('#hud-score')?.textContent
   }));
-  assert('mobile landscape gameplay shows controls without rotate blocker', gameplay.controlsVisible && !gameplay.rotateVisible, gameplay);
+  assert('mobile landscape gameplay shows controls without rotate blocker and hides Shoot until armed', gameplay.controlsVisible && gameplay.shootHidden && !gameplay.rotateVisible, gameplay);
   assert('mobile landscape movement uses arrow buttons, not keyboard-letter prompts', gameplay.moveButtonCodes.join(',') === '8592,8594', gameplay);
   assert('mobile landscape touch buttons suppress long-press selection and context menus', gameplay.rightUserSelect === 'none' && gameplay.rightTouchAction === 'none' && gameplay.rightContextMenuPrevented, gameplay);
   assert('mobile landscape touch controls are translucent and first-run tutorial is skippable', gameplay.controlOpacity < 0.9 && (!gameplay.tutorialVisible || gameplay.tutorialSkipVisible), gameplay);

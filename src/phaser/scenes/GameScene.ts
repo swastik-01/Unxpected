@@ -84,7 +84,11 @@ interface PhysicsDebugSnapshot {
     runComplete: boolean;
     totalCoins: number;
   };
+  audioProfile: string;
+  blueprintId: string;
+  chapterId: string;
   routeArchetype: string;
+  routeSignature: string;
   theme: string;
   profile: PlayerProfile;
   entities: Record<string, {
@@ -303,7 +307,7 @@ export class GameScene extends Phaser.Scene {
         'AI online: reading speed, jumps, waits, and deaths'
       ]
     };
-    this.audio.startMusic(this.getMusicIntensity());
+    this.audio.startMusic(this.getMusicIntensity(), this.level.audioProfile);
 
     this.solidGroup = this.physics.add.staticGroup();
     this.dynamicSolidGroup = this.physics.add.group({ allowGravity: false, immovable: true });
@@ -360,7 +364,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.physics.resume();
-    this.audio.startMusic(this.getMusicIntensity());
+    this.audio.startMusic(this.getMusicIntensity(), this.level.audioProfile);
     this.audio.setMusicIntensity(this.getMusicIntensity());
   }
 
@@ -1004,8 +1008,13 @@ export class GameScene extends Phaser.Scene {
       this.mutationsSurvived += 1;
       this.adaptationLog = [event.hint, ...this.adaptationLog.filter((entry) => entry !== event.hint)].slice(0, 6);
     }
-    if (runtime.schema.behavior === 'rebuild_floor' && event.action === 'floor_collapse') {
-      this.scheduleFloorRebuild(runtime, time);
+    if ((runtime.schema.behavior === 'rebuild_floor' || runtime.schema.behavior === 'flicker_floor') && event.action === 'floor_collapse') {
+      runtime.triggered = true;
+      this.scheduleFloorRebuild(
+        runtime,
+        runtime.schema.behavior === 'flicker_floor' ? 860 : 1700,
+        runtime.schema.behavior === 'flicker_floor' ? 1550 : 2600
+      );
     }
     this.spawnMutationBurst(runtime.sprite.x, runtime.sprite.y, event.action === 'mercy_bridge');
     this.spawnFloatText(event.action === 'mercy_bridge' ? 'Recovery' : 'Mutation', runtime.sprite.x, runtime.sprite.y - 48, event.action === 'mercy_bridge' ? '#58f0a7' : '#ffd166');
@@ -1015,12 +1024,12 @@ export class GameScene extends Phaser.Scene {
     this.shakeCamera(event.action === 'mercy_bridge' ? 0.0016 : 0.0032, 90);
   }
 
-  private scheduleFloorRebuild(runtime: RuntimeEntity, time: number) {
+  private scheduleFloorRebuild(runtime: RuntimeEntity, rebuildDelayMs: number, cooldownMs: number) {
     runtime.rebuildTimer?.remove();
-    runtime.rebuildTimer = this.time.delayedCall(1700, () => {
+    runtime.rebuildTimer = this.time.delayedCall(rebuildDelayMs, () => {
       this.restoreRuntimeEntity(runtime);
       runtime.triggered = false;
-      runtime.reactivateAt = time + 2600;
+      runtime.reactivateAt = this.time.now + cooldownMs;
       this.spawnMutationBurst(runtime.sprite.x, runtime.sprite.y, true);
       this.spawnFloatText('Rebuilt', runtime.sprite.x, runtime.sprite.y - 48, '#58f0a7');
     });
@@ -1283,13 +1292,9 @@ export class GameScene extends Phaser.Scene {
     this.destroyRuntimeEntities();
     this.level = structuredClone(this.originalLevel);
     this.level.tick_sequence = 0;
-    this.level.input_hijack = { active: false, mapping: {} };
-    this.level.global_environment = {
-      gravity_vector: { x: 0, y: 980 },
-      friction_multiplier: 1,
-      camera_lock: false
-    };
-    this.physics.world.gravity.x = 0;
+    this.level.input_hijack = structuredClone(this.originalLevel.input_hijack);
+    this.level.global_environment = structuredClone(this.originalLevel.global_environment);
+    this.physics.world.gravity.x = this.level.global_environment.gravity_vector.x;
     this.physics.world.gravity.y = this.level.global_environment.gravity_vector.y;
     this.checkpointIndex = 0;
     this.checkpoint = { ...playerStart };
@@ -1624,7 +1629,9 @@ export class GameScene extends Phaser.Scene {
       totalCoins: this.totalCoins,
       trust: this.currentDecision.trust,
       notice,
-      mutations: this.currentDecision.logEntries
+      mutations: this.currentDecision.logEntries,
+      weaponCharges: this.weaponCharges,
+      weaponReady: this.weaponCharges > 0
     };
 
     window.dispatchEvent(new CustomEvent('paradox:hud', { detail: snapshot }));
@@ -1864,7 +1871,11 @@ export class GameScene extends Phaser.Scene {
         runComplete: this.runComplete,
         totalCoins: this.totalCoins
       },
+      audioProfile: this.level.audioProfile.id,
+      blueprintId: this.level.blueprintId,
+      chapterId: this.level.chapterId,
       routeArchetype: this.level.route_archetype.id,
+      routeSignature: this.level.routeSignature,
       theme: this.level.theme.id,
       profile: this.currentDecision.profile,
       entities

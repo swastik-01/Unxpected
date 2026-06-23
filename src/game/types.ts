@@ -13,7 +13,8 @@ export type LevelThemeId =
   | 'void_tide'
   | 'signal_metro'
   | 'crystal_cave'
-  | 'storm_rig';
+  | 'storm_rig'
+  | 'paradox_core';
 export type RouteArchetypeId =
   | 'core_run'
   | 'sky_ladder'
@@ -21,7 +22,20 @@ export type RouteArchetypeId =
   | 'collapse_bridge'
   | 'crossfire_gap'
   | 'hunter_lane'
-  | 'vertical_gate';
+  | 'vertical_gate'
+  | 'split_path'
+  | 'weapon_arena';
+export type TrapFamily =
+  | 'bottom_bullet'
+  | 'collapse'
+  | 'crusher'
+  | 'fake_safe'
+  | 'falling_object'
+  | 'hunter'
+  | 'portal_trap'
+  | 'rebuild_floor'
+  | 'rolling_rock'
+  | 'weapon';
 
 export interface LevelTheme {
   accent: string;
@@ -43,6 +57,49 @@ export interface RouteArchetype {
   id: RouteArchetypeId;
   label: string;
   signature: string;
+}
+
+export interface AudioProfile {
+  bassFrequency: number;
+  filterBase: number;
+  filterRange: number;
+  id: string;
+  label: string;
+  masterGain: number;
+  noiseTone: 'clean' | 'warm' | 'cold' | 'metal' | 'void' | 'storm';
+  pulseFrequency: number;
+  pulseIntervalMs: number;
+  shimmerFrequency: number;
+}
+
+export interface TrapSpec {
+  family: TrapFamily;
+  id: string;
+  telegraphMs: number;
+  warning: string;
+}
+
+export interface ChapterDefinition {
+  audioProfile: AudioProfile;
+  id: string;
+  label: string;
+  levelEnd: number;
+  levelStart: number;
+  motif: string;
+  theme: LevelTheme;
+  trapStyle: string;
+}
+
+export interface LevelBlueprint {
+  blueprintIndex: number;
+  chapterId: string;
+  difficulty: number;
+  id: string;
+  label: string;
+  levelIndex: number;
+  routeArchetype: RouteArchetype;
+  routeSignature: string;
+  trapSpecs: TrapSpec[];
 }
 
 export interface CosmeticLoadout {
@@ -160,7 +217,7 @@ export interface MutationEvent {
 export interface EntitySchema {
   entity_id: string;
   base_type: BaseEntityType;
-  behavior?: 'none' | 'rebuild_floor' | 'rolling_hazard' | 'sky_fall' | 'hunter_chase' | 'weapon_pickup';
+  behavior?: 'none' | 'rebuild_floor' | 'flicker_floor' | 'rolling_hazard' | 'sky_fall' | 'hunter_chase' | 'weapon_pickup';
   transform: Transform;
   render_layer: RenderLayer;
   collision_mask: CollisionMask;
@@ -178,10 +235,15 @@ export interface InputHijackState {
 }
 
 export interface DynamicLevelSchema {
+  audioProfile: AudioProfile;
+  blueprintId: string;
+  chapterId: string;
+  chapterTheme: LevelTheme;
   session_id: string;
   tick_sequence: number;
   theme: LevelTheme;
   route_archetype: RouteArchetype;
+  routeSignature: string;
   global_environment: {
     gravity_vector: Vector2;
     friction_multiplier: number;
@@ -247,6 +309,8 @@ export interface HudSnapshot {
   trust: number;
   notice: string;
   mutations: string[];
+  weaponCharges: number;
+  weaponReady: boolean;
 }
 
 export interface TutorialSnapshot {

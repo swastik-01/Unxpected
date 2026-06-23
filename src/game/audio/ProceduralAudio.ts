@@ -1,3 +1,5 @@
+import type { AudioProfile } from '../types';
+
 type AudioCue =
   | 'checkpoint'
   | 'coin'
@@ -10,6 +12,19 @@ type AudioCue =
   | 'warning';
 
 type AudioContextConstructor = typeof AudioContext;
+
+const defaultAudioProfile: AudioProfile = {
+  id: 'default_neon',
+  label: 'Default Neon',
+  bassFrequency: 55,
+  shimmerFrequency: 165,
+  pulseFrequency: 880,
+  pulseIntervalMs: 3450,
+  filterBase: 420,
+  filterRange: 980,
+  masterGain: 0.034,
+  noiseTone: 'clean'
+};
 
 interface WindowWithWebkitAudio extends Window {
   webkitAudioContext?: AudioContextConstructor;
@@ -56,6 +71,7 @@ const cueMap: Record<AudioCue, Array<{ duration: number; frequency: number; gain
 export class ProceduralAudio {
   private context: AudioContext | null = null;
   private muted = false;
+  private profile = defaultAudioProfile;
   private music: {
     bass: OscillatorNode;
     shimmer: OscillatorNode;
@@ -77,8 +93,23 @@ export class ProceduralAudio {
     });
   }
 
-  startMusic(intensity = 0.45) {
-    if (this.muted || this.music) return;
+  setProfile(profile: AudioProfile) {
+    this.profile = profile;
+    if (!this.music || !this.context) return;
+    const now = this.context.currentTime;
+    this.music.bass.frequency.linearRampToValueAtTime(profile.bassFrequency, now + 0.34);
+    this.music.shimmer.frequency.linearRampToValueAtTime(profile.shimmerFrequency, now + 0.34);
+    this.setMusicIntensity(0.45);
+  }
+
+  startMusic(intensity = 0.45, profile?: AudioProfile) {
+    if (profile) this.profile = profile;
+    if (this.muted) return;
+    if (this.music) {
+      if (profile) this.setProfile(profile);
+      this.setMusicIntensity(intensity);
+      return;
+    }
 
     const context = this.getContext();
     if (!context) return;
@@ -93,11 +124,11 @@ export class ProceduralAudio {
     const shimmer = context.createOscillator();
 
     bass.type = 'sawtooth';
-    bass.frequency.setValueAtTime(55, context.currentTime);
+    bass.frequency.setValueAtTime(this.profile.bassFrequency, context.currentTime);
     shimmer.type = 'triangle';
-    shimmer.frequency.setValueAtTime(165, context.currentTime);
+    shimmer.frequency.setValueAtTime(this.profile.shimmerFrequency, context.currentTime);
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(520, context.currentTime);
+    filter.frequency.setValueAtTime(this.profile.filterBase, context.currentTime);
     filter.Q.setValueAtTime(7, context.currentTime);
     master.gain.setValueAtTime(0.0001, context.currentTime);
 
@@ -115,8 +146,8 @@ export class ProceduralAudio {
       filter,
       master,
       pulseTimer: window.setInterval(() => {
-        if (!this.muted) this.scheduleTone(context, 880, 0.045, 0.018, 0, 'triangle');
-      }, 3450)
+        if (!this.muted) this.scheduleTone(context, this.profile.pulseFrequency, 0.045, 0.014, 0, 'triangle');
+      }, this.profile.pulseIntervalMs)
     };
     this.setMusicIntensity(intensity);
   }
@@ -126,9 +157,9 @@ export class ProceduralAudio {
     const amount = Math.max(0, Math.min(1, intensity));
     const now = this.context.currentTime;
     this.music.master.gain.cancelScheduledValues(now);
-    this.music.master.gain.linearRampToValueAtTime(0.012 + amount * 0.035, now + 0.22);
+    this.music.master.gain.linearRampToValueAtTime(0.009 + amount * this.profile.masterGain, now + 0.22);
     this.music.filter.frequency.cancelScheduledValues(now);
-    this.music.filter.frequency.linearRampToValueAtTime(420 + amount * 980, now + 0.28);
+    this.music.filter.frequency.linearRampToValueAtTime(this.profile.filterBase + amount * this.profile.filterRange, now + 0.28);
   }
 
   stopMusic() {
